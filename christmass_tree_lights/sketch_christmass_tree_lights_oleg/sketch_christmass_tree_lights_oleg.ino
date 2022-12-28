@@ -66,10 +66,10 @@ void loop() {
         candleBrightnessIncr = false;
       }
     } else {
-      if (candleBrightness >= 30) {                     // orig: 40
+      if (candleBrightness > 0) {                       // orig: 40
         candleBrightness -= 1;                          // orig: 5
       } else {
-        candleBrightness = 30;                          // orig: 40
+        candleBrightness = 0;                           // orig: 40
         candleBrightnessIncr = true;
       }
     }
