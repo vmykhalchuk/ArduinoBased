@@ -59,17 +59,17 @@ void loop() {
   uint16_t _m = (uint16_t) millis();
   if ((_m - candleTimerMs) >= candleDelaySetMs) {
     if (candleBrightnessIncr) {
-      if (candleBrightness <= 250) {
-        candleBrightness += 5;
+      if (candleBrightness <= 70) {                     // orig: 250
+        candleBrightness += 1;                          // orig: 5
       } else {
-        candleBrightness = 255;
+        candleBrightness = 75;                          // orig 255
         candleBrightnessIncr = false;
       }
     } else {
-      if (candleBrightness >= 40) {
-        candleBrightness -= 5;
+      if (candleBrightness >= 30) {                     // orig: 40
+        candleBrightness -= 1;                          // orig: 5
       } else {
-        candleBrightness = 40;
+        candleBrightness = 30;                          // orig: 40
         candleBrightnessIncr = true;
       }
     }
