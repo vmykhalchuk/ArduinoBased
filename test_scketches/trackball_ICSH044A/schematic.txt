@@ -1,0 +1,9 @@
+  SCHEMATIC
+
+ LCD screen is connected:
+   Arduino Nano     LCM1602 Funduino
+     A4         <-->     SDA
+     A5         <-->     SCL
+
+ D11 <--> IN: Up (trackball)
+ D12 <--> IN: Dwn (trackball)
