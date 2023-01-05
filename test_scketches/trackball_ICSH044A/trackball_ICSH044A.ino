@@ -1,3 +1,5 @@
+const uint8_t pinLCDHighlightPWM = 9;
+
 const uint8_t pinTrackballUp = 11;
 const uint8_t pinTrackballDown = 12;
 
@@ -18,6 +20,9 @@ LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars
 // LCD (END)
 
 void setup() {
+  pinMode(pinLCDHighlightPWM, OUTPUT);
+  analogWrite(pinLCDHighlightPWM, 255);
+
   lcd.init(); // initialize lcd
   // Print a message to the LCD.
   lcd.backlight();
@@ -31,7 +36,7 @@ void setup() {
 
   lcd.setCursor(0,0);
   lcd.print(F("Up:     Dn:     "));
-  lcd.setCursor(0,0);
+  lcd.setCursor(0,1);
   lcd.print(F("ms:"));
 }
 
@@ -76,9 +81,9 @@ void loop() {
       trackballDownPulseStarted = false;
       uint16_t resMs = _m - trackballDownPulseStartMillis;
       downCounter++;
-      lcd.setCursor(3,0);
+      lcd.setCursor(3+8,0);
       lcd.print(downCounter);
-      lcd.setCursor(3+8,1);
+      lcd.setCursor(3,1);
       lcd.print(resMs);
       lcd.print("    ");
     }
