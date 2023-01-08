@@ -57,15 +57,35 @@ void loop() {
 
   if (trackballUpPosition != digitalRead(pinTrackballUp)) {
     // pos changed
+    uint8_t error = 0;
     uint16_t resMs = _m - trackballUpMs;
     trackballUpPosition != trackballUpPosition;
     trackballUpMs = _m;
     upCounter++;
+    if (trackballUpPosition != digitalRead(pinTrackballUp)) {
+      error |= 0x01;
+    }
     lcd.setCursor(3,0);
     lcd.print(upCounter);
+    if (trackballUpPosition != digitalRead(pinTrackballUp)) {
+      error |= 0x02;
+    }
     lcd.setCursor(3,1);
     lcd.print(resMs);
+    if (trackballUpPosition != digitalRead(pinTrackballUp)) {
+      error |= 0x04;
+    }
     lcd.print("    ");
+    if (trackballUpPosition != digitalRead(pinTrackballUp)) {
+      error |= 0x08;
+    }
+
+    if (error) {
+      lcd.setCursor(3,1);
+      lcd.print("E");
+      lcd.print(error);
+      lcd.print("    ");
+    }
   }
   if (trackballDownPosition != digitalRead(pinTrackballDown)) {
     // pos changed
