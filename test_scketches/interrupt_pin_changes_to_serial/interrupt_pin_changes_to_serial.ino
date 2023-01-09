@@ -12,6 +12,8 @@ volatile uint8_t resultsTailPos = 0;
 volatile uint16_t error1 = 0;
 volatile uint16_t error2 = 0;
 
+volatile uint16_t _micros;
+
 void setup() {
   pinMode(pinInput, INPUT); //digitalWrite(pinGeigerInput, HIGH);
 
@@ -20,9 +22,10 @@ void setup() {
     // some boards need to wait to ensure access to serial over USB
   }
 
-  Serial.println("Interrupt on pin tester v0.1 (2023Jan09");
+  Serial.println("Interrupt on pin tester v0.1 (2023Jan09)");
 
-  interruptRoutineMicros = micros();
+  _micros = micros();
+  interruptRoutineMicros = _micros;
   inputPinState = PIND & pinInputMask;//digitalRead(pinInput);
   attachInterrupt(digitalPinToInterrupt(pinInput), pinInputChangeInterruptRoutine, CHANGE);
 }
@@ -31,7 +34,7 @@ const uint8_t andMasks[] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 };
 const uint8_t minusMasks[] = { 0xFF-0x01, 0xFF-0x02, 0xFF-0x04, 0xFF-0x08, 0xFF-0x10, 0xFF-0x20, 0xFF-0x40, 0xFF-0x80 };
 
 void pinInputChangeInterruptRoutine() {
-  bool newInputPinState = PIND & pinInputMask; //digitalRead(pinInput);
+  bool newInputPinState = digitalRead(pinInput); //PIND & pinInputMask; //digitalRead(pinInput);
   if (inputPinState == newInputPinState) {
     // error, missed change
     if (error1 != 0xFFFF) error1++;
@@ -40,7 +43,7 @@ void pinInputChangeInterruptRoutine() {
     interruptRoutineMicros += res;
   inputPinState = newInputPinState;
 
-  uint8_t newHeadPos = resultsHeadPos++;
+  uint8_t newHeadPos = resultsHeadPos + 1;
   if (resultsTailPos == newHeadPos) {
     // error 2 - overflow!!!
     // so we skip newer results till we get space
@@ -57,6 +60,7 @@ void pinInputChangeInterruptRoutine() {
 }
 
 void loop() {
+  //_micros = micros();
   if (resultsHeadPos != resultsTailPos) {
     if (savedInputPinSates[resultsTailPos >> 3] & andMasks[resultsTailPos & 7]) {
       Serial.print('H');
