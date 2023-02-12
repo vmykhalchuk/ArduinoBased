@@ -15,7 +15,7 @@ volatile uint16_t error2 = 0;
 volatile uint16_t _micros;
 
 void setup() {
-  pinMode(pinInput, INPUT); //digitalWrite(pinGeigerInput, HIGH);
+  pinMode(pinInput, INPUT); digitalWrite(pinInput, HIGH);
 
   Serial.begin(9600);
   while(!Serial) {
