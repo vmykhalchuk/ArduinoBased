@@ -1,0 +1,11 @@
+Drivers:
+https://github.com/digistump/DigistumpArduino/releases
+Digistump.Drivers.zip > DPinst64.exe
+
+Board:
+1) ArduinoIDE > File > Preferences
+2) add URL to "Additional Boards Managers URLs":
+http://digistump.com/package_digistump_index.json
+3) Tools > Board: "Digispark (Default 16.5mhz)"
+4) Programmer: "Micronucleus"
+5) Hit Upload and then connect board
