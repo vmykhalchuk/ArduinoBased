@@ -67,5 +67,13 @@ void loopD2() {
     DigiKeyboard.print(" {");
     DigiKeyboard.print(resOnClick);
     DigiKeyboard.print("} ");
+
+    int blinkTimes = (resOnClick > 0 && resOnClick <= 3) ? resOnClick : 10;
+    for (int i = 0; i < blinkTimes; i++) {
+      digitalWrite(pinLed, HIGH);
+      delay(300);
+      digitalWrite(pinLed, LOW);
+      delay(500);
+    }
   }
 }
