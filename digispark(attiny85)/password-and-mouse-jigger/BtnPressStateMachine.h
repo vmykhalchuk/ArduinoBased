@@ -31,7 +31,7 @@ class BtnPressStateMachine {
       v = 0;
       result = 0;
     };
-    const static uint8_t intervalMs = 128;
+    const static uint8_t intervalMs = 5;
 
   public:
     BtnPressStateMachine(uint8_t pinBtn, bool defaultBtnState): timerChecker(intervalMs) {

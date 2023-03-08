@@ -1,10 +1,15 @@
 const int pinBtn1 = 2; // PB2
 const int pinLed = 1;  // PB1
 
+const int LONG_CLICK = 5;
+
 #include "DigiKeyboard.h"
+#include "DigiMouse.h"
 
 #include "TimerChecker.h"
 TimerChecker timerCheckerForClicksCounter(501);
+TimerChecker timerCheckerForMouseJigger(500);
+TimerChecker timerCheckerForMouseAndKeyboardUsbUpdate(20);
 
 #include "BtnPressStateMachine.h"
 BtnPressStateMachine btn1Sm(pinBtn1, HIGH);
@@ -12,6 +17,10 @@ BtnPressStateMachine btn1Sm(pinBtn1, HIGH);
 void setup() {
   pinMode(pinBtn1, INPUT_PULLUP);
   pinMode(pinLed, OUTPUT);
+
+  DigiMouse.init(); // call init to enumerate
+
+  timerCheckerForMouseAndKeyboardUsbUpdate.restart();
 }
 
 void loop() {
@@ -20,7 +29,7 @@ void loop() {
 
 int loopD1_i = 0;
 void loopD1() {
-  delay(200);
+  delayN25ms(2*4);
   if (digitalRead(pinBtn1) == LOW) {
     digitalWrite(pinLed, HIGH);
   } else {
@@ -34,11 +43,16 @@ void loopD1() {
 }
 
 int nClick = 0;
-
+bool mouseJiggering = false;
 void loopD2() {
   btn1Sm.loop();
+  if (timerCheckerForMouseAndKeyboardUsbUpdate.isTimedOut()) {
+    DigiKeyboard.update();
+    DigiMouse.update();
+    timerCheckerForMouseAndKeyboardUsbUpdate.restart();
+  }
 
-  int resOnClick = 0; // 0 - no click; 1,2,3 - single,double,triple click; -5 - too many clicks; 10 - long click; -10 - error on long click
+  int resOnClick = 0; // 0 - no click; 1,2,3 - single,double,triple click; -5 - too many clicks; 5 - long click; -10 - error on long click
 
   bool timerTimedOut = timerCheckerForClicksCounter.isTimedOut();
   if (timerTimedOut) {
@@ -63,17 +77,47 @@ void loopD2() {
   }
 
   if (resOnClick != 0) {
-    DigiKeyboard.sendKeyStroke(0);
-    DigiKeyboard.print(" {");
-    DigiKeyboard.print(resOnClick);
-    DigiKeyboard.print("} ");
+    handleClicks_debug(resOnClick);
+    handleClicks(resOnClick);
+  }
 
-    int blinkTimes = (resOnClick > 0 && resOnClick <= 3) ? resOnClick : 10;
-    for (int i = 0; i < blinkTimes; i++) {
-      digitalWrite(pinLed, HIGH);
-      delay(300);
-      digitalWrite(pinLed, LOW);
-      delay(500);
+  if (mouseJiggering) {
+    if (timerCheckerForMouseJigger.isTimedOut()) {
+      DigiMouse.moveY(5);
+      timerCheckerForMouseJigger.restart();
     }
+  }
+}
+
+// 1,2,3 or 5 (long click)
+void handleClicks_debug(int nClicks) {
+  blinkLedNTimes((nClicks > 0 && nClicks <= 3) ? nClicks : 5);
+}
+
+// 1,2,3 or 5 (long click)
+void handleClicks(int nClicks) {
+  if (nClicks == LONG_CLICK) {
+    DigiKeyboard.sendKeyStroke(0);
+    DigiKeyboard.print("Gm0dFL_23_Eq9");
+    DigiKeyboard.sendKeyStroke(KEY_ENTER);
+  } else if (nClicks == 2) {
+    mouseJiggering = !mouseJiggering;
+    timerCheckerForMouseJigger.restart();
+  }
+}
+
+void blinkLedNTimes(uint8_t blinkTimes) {
+  for (int i = 0; i < blinkTimes; i++) {
+    digitalWrite(pinLed, HIGH);
+    delayN25ms(3*4);
+    digitalWrite(pinLed, LOW);
+    delayN25ms(5*4);
+  }
+}
+
+void delayN25ms(int n25ms) {
+  for (int i = 0; i < n25ms; i++) {
+    DigiKeyboard.delay(25);
+    DigiMouse.update();
   }
 }

@@ -8,9 +8,7 @@ void BtnPressStateMachine::loop() {
     case ZERO:
       btnCurrState = digitalRead(pinBtn);
       if (btnCurrState != defaultBtnState) {
-        Serial.print(F("btn #")); Serial.print(buttonId); Serial.print(F(" pressed: "));
-        Serial.println(btnCurrState);
-        timerChecker.restart();
+        timerChecker.restart(intervalMs);
         v = 0;
         result = 0;
         CSTATE(PRESSED);
@@ -20,7 +18,7 @@ void BtnPressStateMachine::loop() {
     case PRESSED:
       if (timerChecker.isTimedOut()) {
         v++;
-        timerChecker.restart();
+        timerChecker.restart(intervalMs);
         btnCurrState = digitalRead(pinBtn);
         if (btnCurrState == defaultBtnState) {
           CSTATE(RELEASED);
@@ -30,10 +28,7 @@ void BtnPressStateMachine::loop() {
 
     case RELEASED:
       setResult(v); // set result to be taken by main SM
-      Serial.print(F("btn #")); Serial.print(buttonId); Serial.print(F(" released: "));
-      Serial.print(btnCurrState);
-      Serial.print(F("; result: ")); Serial.println(this->result);
-      timerChecker.restart();
+      timerChecker.restart(intervalMs * 8);
       CSTATE(COOLDOWN);
       break;
 
@@ -46,7 +41,6 @@ void BtnPressStateMachine::loop() {
 
     default:
       // FIXME handle this error somehow!
-      Serial.print(F("ERRBtnPrssSM:")); Serial.println(state);
       _reset();
   };
 }
