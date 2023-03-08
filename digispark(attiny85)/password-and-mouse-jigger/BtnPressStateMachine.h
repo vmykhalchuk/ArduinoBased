@@ -31,7 +31,8 @@ class BtnPressStateMachine {
       v = 0;
       result = 0;
     };
-    const static uint8_t intervalMs = 5;
+    const static uint8_t intervalMsShift = 4;
+    const static uint8_t intervalMs = 1 << intervalMsShift;//128;
 
   public:
     BtnPressStateMachine(uint8_t pinBtn, bool defaultBtnState): timerChecker(intervalMs) {
@@ -45,9 +46,9 @@ class BtnPressStateMachine {
     void setResult(uint16_t res) { result = res; } // FIXME Must be private access!!!
     inline bool isResult() __attribute__((always_inline)) { return result != 0; }
     uint16_t takeResult() { uint16_t r = result; result = 0; return r; }
-    uint16_t takeResultMs() { return takeResult() << 7; }
+    uint16_t takeResultMs() { return takeResult() << intervalMsShift; }
     inline uint16_t peekResult() __attribute__((always_inline)) { return v; }
-    inline uint16_t peekResultMs() __attribute__((always_inline)) { return peekResult() << 7; }
+    inline uint16_t peekResultMs() __attribute__((always_inline)) { return peekResult() << intervalMsShift; }
     void reset() { _reset(); }
 };
 

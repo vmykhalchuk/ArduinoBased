@@ -4,11 +4,11 @@ const int pinLed = 1;  // PB1
 const int LONG_CLICK = 5;
 
 #include "DigiKeyboard.h"
-#include "DigiMouse.h"
+//#include "DigiMouse.h"
 
 #include "TimerChecker.h"
 TimerChecker timerCheckerForClicksCounter(501);
-TimerChecker timerCheckerForMouseJigger(500);
+TimerChecker timerCheckerForMouseJigger(3000);
 TimerChecker timerCheckerForMouseAndKeyboardUsbUpdate(20);
 
 #include "BtnPressStateMachine.h"
@@ -18,7 +18,7 @@ void setup() {
   pinMode(pinBtn1, INPUT_PULLUP);
   pinMode(pinLed, OUTPUT);
 
-  DigiMouse.init(); // call init to enumerate
+  //DigiMouse.begin(); //start or reenumerate USB - BREAKING CHANGE from old versions that didn't require this
 
   timerCheckerForMouseAndKeyboardUsbUpdate.restart();
 }
@@ -45,12 +45,19 @@ void loopD1() {
 int nClick = 0;
 bool mouseJiggering = false;
 void loopD2() {
-  btn1Sm.loop();
   if (timerCheckerForMouseAndKeyboardUsbUpdate.isTimedOut()) {
     DigiKeyboard.update();
-    DigiMouse.update();
+    //DigiMouse.update();
     timerCheckerForMouseAndKeyboardUsbUpdate.restart();
   }
+
+  uint32_t _m = micros();
+  {
+    Kingdom::millisShort = _m / 1000;//_m >> 10; to divide by 1024 which is less accurate
+    Kingdom::microsShort = _m; // FIXME make sure we do not have overflow - otherwise we have to report error!
+  }
+
+  btn1Sm.loop();
 
   int resOnClick = 0; // 0 - no click; 1,2,3 - single,double,triple click; -5 - too many clicks; 5 - long click; -10 - error on long click
 
@@ -66,7 +73,7 @@ void loopD2() {
   if (btn1Sm.isResult()) {
     if (btn1Sm.takeResultMs() >= 1000) {
       // long click, fail if nClick != 0
-      resOnClick = (nClick == 0) ? 10 : -10;
+      resOnClick = (nClick == 0) ? LONG_CLICK : -10;
       nClick = 0;
     } else if (!timerTimedOut) {
       timerCheckerForClicksCounter.restart(500);
@@ -77,13 +84,14 @@ void loopD2() {
   }
 
   if (resOnClick != 0) {
-    handleClicks_debug(resOnClick);
     handleClicks(resOnClick);
+    handleClicks_debug(resOnClick);
   }
 
   if (mouseJiggering) {
     if (timerCheckerForMouseJigger.isTimedOut()) {
-      DigiMouse.moveY(5);
+      //DigiMouse.moveY(5);
+      DigiKeyboard.sendKeyStroke(KEY_ARROW_LEFT);
       timerCheckerForMouseJigger.restart();
     }
   }
@@ -91,7 +99,16 @@ void loopD2() {
 
 // 1,2,3 or 5 (long click)
 void handleClicks_debug(int nClicks) {
-  blinkLedNTimes((nClicks > 0 && nClicks <= 3) ? nClicks : 5);
+  if ((nClicks > 0 && nClicks <= 3) || nClicks == LONG_CLICK) {
+    blinkLedNTimes(nClicks);
+  } else {
+    blinkLedNTimes(7);
+    delayN25ms(5*4);//500ms
+    if (nClicks == -5) blinkLedNTimes(1);
+    else if (nClicks == -10) blinkLedNTimes(2);
+    else if (nClicks == -99) blinkLedNTimes(3);
+    else blinkLedNTimes(5);
+  }
 }
 
 // 1,2,3 or 5 (long click)
@@ -118,6 +135,6 @@ void blinkLedNTimes(uint8_t blinkTimes) {
 void delayN25ms(int n25ms) {
   for (int i = 0; i < n25ms; i++) {
     DigiKeyboard.delay(25);
-    DigiMouse.update();
+    //DigiMouse.update();
   }
 }

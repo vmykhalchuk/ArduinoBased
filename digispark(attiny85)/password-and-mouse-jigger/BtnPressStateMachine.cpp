@@ -8,7 +8,7 @@ void BtnPressStateMachine::loop() {
     case ZERO:
       btnCurrState = digitalRead(pinBtn);
       if (btnCurrState != defaultBtnState) {
-        timerChecker.restart(intervalMs);
+        timerChecker.restart();
         v = 0;
         result = 0;
         CSTATE(PRESSED);
@@ -18,7 +18,7 @@ void BtnPressStateMachine::loop() {
     case PRESSED:
       if (timerChecker.isTimedOut()) {
         v++;
-        timerChecker.restart(intervalMs);
+        timerChecker.restart();
         btnCurrState = digitalRead(pinBtn);
         if (btnCurrState == defaultBtnState) {
           CSTATE(RELEASED);
@@ -28,7 +28,7 @@ void BtnPressStateMachine::loop() {
 
     case RELEASED:
       setResult(v); // set result to be taken by main SM
-      timerChecker.restart(intervalMs * 8);
+      timerChecker.restart();
       CSTATE(COOLDOWN);
       break;
 
