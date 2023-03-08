@@ -4,7 +4,7 @@ const int pinLed = 1;  // PB1
 const int LONG_CLICK = 5;
 
 #include "DigiKeyboard.h"
-//#include "DigiMouse.h"
+//#include "DigiMouse.h" only Mouse or Keyboard can be used at once with this library
 
 #include "TimerChecker.h"
 TimerChecker timerCheckerForClicksCounter(501);
