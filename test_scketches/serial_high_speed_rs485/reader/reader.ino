@@ -16,7 +16,7 @@ uint8_t state = 0; // AbCd <200ms> AbCd <200ms>
 long tmstmp;
 bool errorOccurred = false;
 void loop() {
-  if (errorOccurred && (millis() - tmstmp) > 200) {
+  if (errorOccurred && ((millis() - tmstmp) > 50)) {
     errorOccurred = false;
     digitalWrite(pinLed, LOW);
   }
@@ -37,6 +37,6 @@ void loop() {
       errorOccurred = true;
       digitalWrite(pinLed, HIGH);
     }
-    state = state == 3 ? 0 : state + 1;
+    state = (state == 3) ? 0 : (state + 1);
   }
 }
