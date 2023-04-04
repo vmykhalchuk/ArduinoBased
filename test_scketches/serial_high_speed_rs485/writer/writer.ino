@@ -7,8 +7,9 @@ void setup() {
 }
 
 void loop() {
-  Serial.print("SASASASA");
+  Serial.print("AbCd"); delay(200);
+  /*Serial.print("SASASASA");
   for (uint8_t i = 0; i < ('z'-'a'); i++) {
     Serial.print((char)('a'+i));
-  }
+  }*/
 }
