@@ -1,5 +1,5 @@
 const uint8_t pinLedsRGBString = A1;
-const uint8_t pinSensorIn = 3;
+const uint8_t pinSensorIn = 5;
 
 
 // RGB LEDs String (START)
@@ -17,26 +17,47 @@ CRGB leds[NUM_LEDS];
 
 
 void setup() {
-  pinMode(pinSensorIn, INPUT_PULLUP);
-
-  {
-    FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
-    leds[0] = CRGB::Red;
-    leds[1] = CRGB::Green;
-    //CRGB::Blue;
-    //CRGB(255,0,255);
-    //CRGB::White;
-    FastLED.setBrightness(40);
-    FastLED.show();
-    delay(2000);
-    leds[0] = CRGB::Black;
-    leds[1] = CRGB::Black;
-    //FastLED.setBrightness(80);
-    FastLED.show();
+  Serial.begin(9600);
+  while(!Serial) {
+    // some boards need to wait to ensure access to serial over USB
   }
 
+  pinMode(pinSensorIn, INPUT_PULLUP);
+
   Serial.write("AT\r\n");
+
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
+  leds[0] = CRGB::Red;
+  leds[1] = CRGB::Green; //CRGB::Blue;//CRGB(255,0,255);//CRGB::White;
+  FastLED.setBrightness(40);
+  FastLED.show();
+
+  delay(5000);
+  Serial.write("ATD+380975411368;\r\n");
+
+  leds[1] = CRGB::Red;
+  FastLED.show();
+
+  delay(10000);
+
+  leds[0] = CRGB::Black;
+  leds[1] = CRGB::Black;
+  FastLED.show();
 }
+
+// GSM commands:
+//   AT
+//   ATD+38.....;
+//   AT+CLCC
+//   AT+CHUP
+//   ATH
+
+// receives:
+//   RING
+//
+//   +CLIP: "+380975411368",145,"",0,"",0
+//
+//   NO CARRIER
 
 void loop() {
   if (Serial.available()) Serial.read();
@@ -45,7 +66,7 @@ void loop() {
     FastLED.show();
     // ALARMA!!!!
     Serial.write("ATD+380975411368;\r\n");
-    delay(5000);
+    delay(10000);
     leds[0] = CRGB::Black;
     FastLED.show();
   }
