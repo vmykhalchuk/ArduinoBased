@@ -1,5 +1,7 @@
 const uint8_t pinLedsRGBString = A1;
-const uint8_t pinSensorIn = 5;
+const uint8_t pinIRSensorIn = 5;
+const uint8_t pinDoorSmartHouseIn = 6;
+const uint8_t pinDoorVitalnaIn = 7;
 
 
 // RGB LEDs String (START)
@@ -22,7 +24,9 @@ void setup() {
     // some boards need to wait to ensure access to serial over USB
   }
 
-  pinMode(pinSensorIn, INPUT_PULLUP);
+  pinMode(pinIRSensorIn, INPUT_PULLUP);
+  pinMode(pinDoorSmartHouseIn, INPUT_PULLUP);
+  pinMode(pinDoorVitalnaIn, INPUT_PULLUP);
 
   Serial.write("AT\r\n");
 
@@ -61,7 +65,7 @@ void setup() {
 
 void loop() {
   if (Serial.available()) Serial.read();
-  if (digitalRead(pinSensorIn) == LOW) {
+  if (digitalRead(pinIRSensorIn) == LOW || digitalRead(pinDoorSmartHouseIn) == LOW || digitalRead(pinDoorVitalnaIn) == LOW) {
     leds[0] = CRGB::Red;
     FastLED.show();
     // ALARMA!!!!
