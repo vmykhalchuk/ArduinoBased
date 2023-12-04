@@ -1,7 +1,7 @@
-const uint8_t pinLedsRGBString = A1;
-const uint8_t pinIRSensorIn = 5;
-const uint8_t pinDoorSmartHouseIn = 6;
-const uint8_t pinDoorVitalnaIn = 7;
+const uint8_t pinLedsRGBString = 2;//A1;
+const uint8_t pinIRSensorIn = 3;
+const uint8_t pinDoorSmartHouseIn = 4;
+const uint8_t pinDoorVitalnaIn = 5;
 
 
 // RGB LEDs String (START)
@@ -37,7 +37,7 @@ void setup() {
   FastLED.show();
 
   delay(5000);
-  Serial.write("ATD+380975411368;\r\n");
+  Serial.write("ATD+380979635113;\r\n");
 
   leds[1] = CRGB::Red;
   FastLED.show();
@@ -65,11 +65,11 @@ void setup() {
 
 void loop() {
   if (Serial.available()) Serial.read();
-  if (digitalRead(pinIRSensorIn) == LOW || digitalRead(pinDoorSmartHouseIn) == LOW || digitalRead(pinDoorVitalnaIn) == LOW) {
+  if (digitalRead(pinIRSensorIn) == LOW || digitalRead(pinDoorSmartHouseIn) == HIGH || digitalRead(pinDoorVitalnaIn) == HIGH) {
     leds[0] = CRGB::Red;
     FastLED.show();
     // ALARMA!!!!
-    Serial.write("ATD+380975411368;\r\n");
+    Serial.write("ATD+380979635113;\r\n");
     delay(10000);
     leds[0] = CRGB::Black;
     FastLED.show();
