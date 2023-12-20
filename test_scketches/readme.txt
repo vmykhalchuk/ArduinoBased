@@ -1,0 +1,1 @@
+DemoReel100 - for ws2812 leds string (шваблинка)
