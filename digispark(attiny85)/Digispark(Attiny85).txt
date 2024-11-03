@@ -1,3 +1,18 @@
+1) ArduinoIDE > File > Preferences
+2) add URL to "Additional Boards Managers URLs":
+http://digistump.com/package_digistump_index.json
+3) open Tools > Manage Libraries...
+4) Search for Digispark and install it
+  NOTE!!! It didn't work for me! Couldn't load new boards!!!
+
+5) Tools > Board: "Digispark (Default 16.5mhz)"
+6) Programmer: "Micronucleus"
+7) Hit Upload and then connect board
+
+--https://arduino.esp8266.com/stable/package_esp8266com_index.json
+
+--- below outdated instructions:
+
 Drivers:
 https://github.com/digistump/DigistumpArduino/releases
 Digistump.Drivers.zip > DPinst64.exe
