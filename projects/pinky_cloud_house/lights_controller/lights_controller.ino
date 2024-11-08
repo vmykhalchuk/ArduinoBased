@@ -1,25 +1,29 @@
 /*
-
   This controller will monitor switch inputs and filter all contacts jitter or signal noise.
   Outputs will be commanded ON/OFF as a result of input analysis.
-  
-  A0 => D9
-  A1 => D8
-  A2 => D7
-  A3 => D6
-  A4 => D5
-  A5 => D4
+  If input is unstable - error pin is raised HIGH.
+
+  INPUT  => OUTPUT  => ERROR
+ -------------------------
+ A0(PC0) => D2(PD2) =>  D8(PB0)
+ A1(PC1) => D3(PD3) =>  D9(PB1)
+ A2(PC2) => D4(PD4) =>  D10(PB2)
+ A3(PC3) => D5(PD5) =>  D11(PB3)
+ A4(PC4) => D6(PD6) =>  D12(PB4)
+ A5(PC5) => D7(PD7) =>  D13(PB5)
 */
 
 /*
-
   Tech info:
     - https://www.instructables.com/Arduino-and-Port-Manipulation/
     - A0-A5 correeespond to PC0-PC5
 */
 
 const uint8_t MAP_COUNT = 6;
-const uint8_t pinOutputs[MAP_COUNT] = {4,5,6,7,8,9};
+uint8_t outputPinMaskArr[MAP_COUNT];
+uint8_t errorPinMaskArr[MAP_COUNT];
+uint8_t invOutputPinMaskArr[MAP_COUNT];
+uint8_t invErrorPinMaskArr[MAP_COUNT];
 
 uint8_t states = 0;
 
@@ -29,14 +33,32 @@ unsigned long inputChangeLastAttemptTimeMs[MAP_COUNT];
 
 void setup() {
   // https://www.instructables.com/Arduino-and-Port-Manipulation/
-  DDRC = DDRC & B11000000; // set PORTC (digital 5~0) to inputs
-  PORTC = PORTC | B00111111; // enable PORTC (digital 5~0) pull-ups
+  DDRC  = DDRC &  B11000000; // set PORTC(5-0) as inputs
+  PORTC = PORTC | B00111111; // enable PORTC(5-0) pull-ups
+
+  DDRD  = DDRD |  B11111100; // set PORTD(7-2) as outputs
+  PORTD = PORTD & B00000011; // set PORTD(7-2) to LOW
+
+  DDRB  = DDRB |  B00111111; // set PORTB(5-0) as outputs
+  PORTB = PORTB & B11000000; // set PORTB(5-0) to LOW
 
   for (uint8_t i = 0; i < MAP_COUNT; i++) {
     inputChangeLastAttemptTimeMs[i] = 0;
-    pinMode(pinOutputs[i], OUTPUT);
+    errorPinMaskArr[i] = 1 << i;
+    invErrorPinMaskArr[i] = !errorPinMaskArr[i];
+    outputPinMaskArr[i] = errorPinMaskArr[i] << 2;
+    invOutputPinMaskArr[i] = outputPinMaskArr[i];
   }
 
+  // test outputs
+  for (uint8_t i = 0; i < MAP_COUNT; i++) {
+    PORTD = PORTD | outputPinMaskArr[i];
+    PORTB = PORTB | errorPinMaskArr[i];
+    delay(100);
+    PORTD = PORTD & invOutputPinMaskArr[i];
+    PORTB = PORTB & invErrorPinMaskArr[i];
+    delay(200);
+  }
 }
 
 void loop() {
@@ -48,8 +70,12 @@ void loop_test() {
   if (states != d) {
     states = d;
     for (uint8_t i = 0; i < MAP_COUNT; i++) {
-      uint8_t mask = 2 << i;
-      digitalWrite(pinOutputs[i], (states & mask)? HIGH : LOW);
+      uint8_t mask = 1 << i;
+      if (states & mask) {
+        PORTD = PORTD | outputPinMaskArr[i];
+      } else {
+        PORTD = PORTD & invOutputPinMaskArr[i];
+      }
     }
   }
 }
@@ -64,9 +90,12 @@ void loop_main_solution2() {
   
   const uint16_t inertiaTicks = 1000;//for how many ticks output state will not change to new value
   uint16_t outputLastTimeUpdatedTicksAgo[MAP_COUNT]; for (uint8_t i = 0; i < MAP_COUNT; i++) outputLastTimeUpdatedTicksAgo[i] = inertiaTicks;
-  const uint8_t highLevelThresholdPercentage = 70;
-  const uint16_t t = ((uint16_t) statisticsSize * 100) / highLevelThresholdPercentage;
-  const uint8_t highLevelThresholdCount = t;
+  const uint8_t lowLevelThresholdPercentage = 30; // below this level is considered 0
+  const uint8_t highLevelThresholdPercentage = 70; // above this level is considered 1
+  const uint16_t t1 = ((uint16_t) statisticsSize * 100) / lowLevelThresholdPercentage;
+  const uint8_t lowLevelThresholdCount = t1;
+  const uint16_t t2 = ((uint16_t) statisticsSize * 100) / highLevelThresholdPercentage;
+  const uint8_t highLevelThresholdCount = t2;
 
   uint8_t masks[8]; uint8_t invMasks[8]; for (uint8_t i = 0; i < 8; i++) { masks[i] = 2 << i; invMasks[i] = (!masks[i]); }
   
@@ -75,7 +104,7 @@ void loop_main_solution2() {
 
     // update statistics & statisticsHighLevelCount with new observation (data)
     for (uint8_t i = 0; i < MAP_COUNT; i++) {
-      uint8_t mask = 2 << i;
+      uint8_t mask = 1 << i;
       if (statistics[statisticsPointer] & mask != 0) {
         if (statisticsHighLevelCount[i] == 0) error = 0x01;
         else statisticsHighLevelCount[i]--;
@@ -95,15 +124,26 @@ void loop_main_solution2() {
       uint8_t mask = masks[i];
       uint8_t invMask = invMasks[i];
       uint8_t hlc = statisticsHighLevelCount[i];
-      uint8_t newPinState = hlc >= highLevelThresholdCount ? mask : 0;
+      uint8_t newPinState = 0;
+      if (hlc >= highLevelThresholdCount) {
+        newPinState = mask;
+        PORTB = PORTB & invErrorPinMaskArr[i]; // clear error pin[i]
+      } else if (hlc <= lowLevelThresholdCount) {
+        newPinState = 0;
+        PORTB = PORTB & invErrorPinMaskArr[i]; // clear error pin[i]
+      } else {
+        PORTB = PORTB | errorPinMaskArr[i]; // set error pin[i]
+        continue;
+      }
+
       uint8_t oldPinState = states & mask;
-      uint16_t t = 0; // inertiaTicks // FIXME for testing we have it zero, when tested - change it back
+      uint16_t t = 0; // inertiaTicks // FIXME for testing we have it zero, when tested - change it back to inertiaTicks
       if (newPinState != oldPinState && outputLastTimeUpdatedTicksAgo[i] >= t) {
         if (newPinState == 0) {
-          digitalWrite(pinOutputs[i], LOW);
+          PORTD = PORTD & invOutputPinMaskArr[i]; // clear out pin[i]
           states = states & invMask;
         } else {
-          digitalWrite(pinOutputs[i], HIGH);
+          PORTD = PORTD | outputPinMaskArr[i]; // set out pin[i]
           states = states | mask;
         }
         outputLastTimeUpdatedTicksAgo[i] = 0;
@@ -124,7 +164,7 @@ void loop_main_solution1() {
 void handleNewData(uint8_t data, uint8_t changesMask) {
   if (states != data) {
     for (uint8_t i = 0; i < MAP_COUNT; i++) {
-      uint8_t mask = 2 << i;
+      uint8_t mask = 1 << i;
       if (states & mask != data & mask) {
         if (!(inputChangeRequested & mask)) {
           inputChangeRequested = inputChangeRequested | mask;
@@ -136,7 +176,7 @@ void handleNewData(uint8_t data, uint8_t changesMask) {
 
   if (inputChangeRequested) {
     for (uint8_t i = 0; i < MAP_COUNT; i++) {
-      uint8_t mask = 2 << i;
+      uint8_t mask = 1 << i;
       if (inputChangeRequested & mask) {
         if ((inputChangeLastAttemptTimeMs[i] - millis()) > 150) {
           if (states & mask != data & mask) {
