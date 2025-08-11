@@ -42,8 +42,25 @@ void loop() {
   {
     Serial.println("Error: Could not read temperature data");
   }
+  
+  
   displayDigits(_c++);
-  delay(3000);
+
+  for (int i = 0; i < 50; i++) {
+    displayDigits(0);
+    delay(1);
+    displayDigits(1);
+    delay(1);
+    displayDigits(3);
+    delay(1);
+    displayDigits(4);
+    delay(1);
+    for (int j = 0; j < 18; j++) {
+      displayDigits(2);
+      delay(1);
+    }
+  }
+  //delay(3000);
 }
 
 
@@ -66,12 +83,12 @@ void displayDigits(int c) {
     clearDPin(5); clearDPin(6);
     
   } else if (c == 3) {
-    setDPin(1,LOW); setDPin(2,HIGH);
-    setDPin(3,LOW); setDPin(5,HIGH);
+    setDPin(1,HIGH); setDPin(2,LOW);
+    clearDPin(3); clearDPin(5);
     clearDPin(4); clearDPin(6);
   } else if (c == 4) {
-    setDPin(1,LOW); setDPin(3,HIGH);
-    setDPin(2,LOW); setDPin(6,HIGH);
+    setDPin(1,HIGH); setDPin(3,LOW);
+    clearDPin(2); clearDPin(6);
     clearDPin(4); clearDPin(5);
   } else if (c == 5) {
     clearDPin(1); clearDPin(2);
