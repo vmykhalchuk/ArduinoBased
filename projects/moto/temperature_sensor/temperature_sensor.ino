@@ -42,30 +42,31 @@ void loop() {
   {
     Serial.println("Error: Could not read temperature data");
   }
-  
-  
-  displayDigits(_c++);
 
+  uint8_t s = 0;
   for (int i = 0; i < 50; i++) {
-    displayDigits(0);
+    clearDAll();
+    setDSegment(s);
     delay(1);
-    displayDigits(1);
+    clearDAll();
+    setDSegment((s+1)%24);
     delay(1);
-    displayDigits(3);
+    clearDAll();
+    setDSegment((s+2)%24);
     delay(1);
-    displayDigits(4);
-    delay(1);
-    for (int j = 0; j < 18; j++) {
-      displayDigits(2);
+    for (int j = 0; i < (24-3); j++) {
+      clearDAll();
       delay(1);
     }
+    s++;
   }
+  
+  //displayDigits(_c++);
   //delay(3000);
 }
 
 
-// 1->D5;2->D6;3->D7;4->B0;5->B1;6->B2
-
+// Display input->Arduino port: 1->D5;2->D6;3->D7;4->B0;5->B1;6->B2
 
 void displayDigits(int c) {
   c = c % 6; //12;
@@ -83,12 +84,12 @@ void displayDigits(int c) {
     clearDPin(5); clearDPin(6);
     
   } else if (c == 3) {
-    setDPin(1,HIGH); setDPin(2,LOW);
-    clearDPin(3); clearDPin(5);
+    setDPin(1,LOW); setDPin(2,HIGH);
+    setDPin(3,LOW); setDPin(5,HIGH);
     clearDPin(4); clearDPin(6);
   } else if (c == 4) {
-    setDPin(1,HIGH); setDPin(3,LOW);
-    clearDPin(2); clearDPin(6);
+    setDPin(1,LOW); setDPin(3,HIGH);
+    setDPin(2,LOW); setDPin(6,HIGH);
     clearDPin(4); clearDPin(5);
   } else if (c == 5) {
     clearDPin(1); clearDPin(2);
@@ -131,5 +132,108 @@ void clearDPin(uint8_t p) {
     DDRB = DDRB & B11111101;
   } else if (p == 6) {
     DDRB = DDRB & B11111011;
+  }
+}
+
+void setDSegment(uint8_t s) {
+  if (s == 0) {
+    setDPinLow(3); setDPinHigh(4);
+  } else if (s == 1) {
+    setDPinLow(3); setDPinHigh(5);
+  } else if (s == 2) {
+    setDPinLow(1); setDPinHigh(2);
+  } else if (s == 3) {
+    setDPinLow(1); setDPinHigh(3);
+  } else if (s == 4) {
+    setDPinLow(1); setDPinHigh(4);
+  } else if (s == 5) {
+    setDPinLow(1); setDPinHigh(5);
+  } else if (s == 6) {
+    setDPinLow(1); setDPinHigh(6);
+  } else if (s == 7) {
+    setDPinLow(2); setDPinHigh(3);
+  } else if (s == 8) {
+    setDPinLow(2); setDPinHigh(4);
+  } else if (s == 9) {
+    setDPinLow(2); setDPinHigh(1);
+  } else if (s == 10) {
+    setDPinLow(3); setDPinHigh(1);
+  } else if (s == 11) {
+    setDPinLow(4); setDPinHigh(1);
+  } else if (s == 12) {
+    setDPinLow(5); setDPinHigh(1);
+  } else if (s == 13) {
+    setDPinLow(6); setDPinHigh(1);
+  } else if (s == 14) {
+    setDPinLow(2); setDPinHigh(5);
+  } else if (s == 15) {
+    setDPinLow(2); setDPinHigh(6);
+  } else if (s == 16) {
+    setDPinLow(3); setDPinHigh(6);
+  } else if (s == 17) {
+    setDPinLow(3); setDPinHigh(2);
+  } else if (s == 18) {
+    setDPinLow(4); setDPinHigh(2);
+  } else if (s == 19) {
+    setDPinLow(5); setDPinHigh(2);
+  } else if (s == 20) {
+    setDPinLow(6); setDPinHigh(2);
+  } else if (s == 21) {
+    setDPinLow(4); setDPinHigh(3);
+  } else if (s == 22) {
+    setDPinLow(5); setDPinHigh(3);
+  } else if (s == 23) {
+    setDPinLow(6); setDPinHigh(3);
+  }
+}
+
+void clearDAll() {
+  DDRD = DDRD & B00011111;
+  PORTD = PORTD & B00011111;
+  DDRB = DDRB & B11111000;
+  PORTB = PORTB & B11111000;
+}
+
+void setDPinHigh(uint8_t p) {
+  if (p == 1) {
+    DDRD = DDRD | B00100000;
+    PORTD = PORTD | B00100000;
+  } else if (p == 2) {
+    DDRD = DDRD | B01000000;
+    PORTD = PORTD | B01000000;
+  } else if (p == 3) {
+    DDRD = DDRD | B10000000;
+    PORTD = PORTD | B10000000;
+  } else if (p == 4) {
+    DDRB = DDRB | B00000001;
+    PORTB = PORTB | B00000001;
+  } else if (p == 5) {
+    DDRB = DDRB | B00000010;
+    PORTB = PORTB | B00000010;
+  } else if (p == 6) {
+    DDRB = DDRB | B00000100;
+    PORTB = PORTB | B00000100;
+  }
+}
+
+void setDPinLow(uint8_t p) {
+  if (p == 1) {
+    DDRD = DDRD | B00100000;
+    PORTD = PORTD & B11011111;
+  } else if (p == 2) {
+    DDRD = DDRD | B01000000;
+    PORTD = PORTD & B10111111;
+  } else if (p == 3) {
+    DDRD = DDRD | B10000000;
+    PORTD = PORTD & B01111111;
+  } else if (p == 4) {
+    DDRB = DDRB | B00000001;
+    PORTB = PORTB & B11111110;
+  } else if (p == 5) {
+    DDRB = DDRB | B00000010;
+    PORTB = PORTB & B11111101;
+  } else if (p == 6) {
+    DDRB = DDRB | B00000100;
+    PORTB = PORTB & B11111011;
   }
 }
