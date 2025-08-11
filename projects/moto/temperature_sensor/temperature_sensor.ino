@@ -6,7 +6,7 @@
 
 OneWire oneWire(ONE_WIRE_BUS);
 
-DallasTemperature sensors($oneWire);
+DallasTemperature sensors(&oneWire);
 
 void setup() {
   Serial.begin(9600);
