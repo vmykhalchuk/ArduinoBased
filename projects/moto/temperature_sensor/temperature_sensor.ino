@@ -25,10 +25,10 @@ void loop() {
   // Check if reading was successful
   if (tempC != DEVICE_DISCONNECTED_C)
   {
-    Serial.print("Temperature for the device 1 (index 0) is: ");
-    Serial.println(tempC);
+    //Serial.print("Temperature for the device 1 (index 0) is: ");
+    //Serial.println(tempC);
 
-    int d100 = (int)(tempC / 100) % 10;
+    /*int d100 = (int)(tempC / 100) % 10;
     int d10 = (int)(tempC / 10) % 10;
     int d1 = (int)tempC % 10;
     int d0 = (int)(tempC * 10) % 10;
@@ -40,7 +40,8 @@ void loop() {
     Serial.print(d1);
     Serial.print(",");
     Serial.print(d0);
-    Serial.println("]");
+    Serial.println("]");*/
+    updateDisplayWithFloatWithOneDecimal(tempC);
 
     // Update segments with digits above
     
@@ -50,12 +51,18 @@ void loop() {
     Serial.println("Error: Could not read temperature data");
   }
 
-  displayB[0] = 0; displayB[1] = 0; displayB[2] = 0;
+  //displayB[0] = 0; displayB[1] = 0; displayB[2] = 0;
   //displayB[s/8] = displayB[s/8] | (1 << (s%8));
-  updateDigitN(4,s % 10);
+  /*updateDigitN(2,s % 10);
+  updateDigitN(3,(s+1) % 10);
+  updateDigitN(4,(s+2) % 10);*/
+
+  /*if (s % 3 == 0) updateDisplay(0,0,3,4,true);
+  if (s % 3 == 1) updateDisplay(0,4,3,9,true);
+  if (s % 3 == 2) updateDisplay(0,0,2,7,false);*/
 
   // display loop
-  for (uint8_t i = 0; i < 50; i++) {
+  for (uint8_t i = 0; i < 200; i++) {
     for (uint8_t j = 0; j < 3; j++) {
       uint8_t b = displayB[j];
       for (uint8_t k = 0; k < 8; k++) {
@@ -66,6 +73,7 @@ void loop() {
       }
     }
   }
+  clearDAll();
 
   s++;
   
@@ -246,6 +254,36 @@ void setDPinLow(uint8_t p) {
   }
 }
 
+void updateDisplayWithFloatWithOneDecimal(float f) {
+  int d100 = (int)(f / 100) % 10;
+  int d10 = (int)(f / 10) % 10;
+  int d1 = (int)f % 10;
+  int d0 = (int)(f * 10) % 10;
+  if (d100 < 2) {
+    updateDisplay(d100,d10,d1,d0,true);
+  } else {
+    updateDisplay(0,9,9,9,false);
+  }
+}
+
+void updateDisplay(uint8_t dig1, uint8_t dig2, uint8_t dig3, uint8_t dig4, bool point) {
+  displayB[0] = 0; displayB[1] = 0; displayB[2] = 0;
+  
+  updateDigitN(4, dig4);
+  if (dig3 != 0 || point || dig1 != 0 || dig2 != 0) {
+    updateDigitN(3, dig3);
+  }
+  if ((dig2 != 0) || (dig1 != 0)) {
+    updateDigitN(2, dig2);
+  }
+  if (dig1 == 1) {
+    displayB[0] = displayB[0] | B0000011;
+  }
+  if (point) {
+    displayB[2] = displayB[2] | B0000001;
+  }
+}
+
 void updateDigitN(uint8_t digitNo, uint8_t v) {
   uint8_t seg = 0;
   if (v == 0) {
@@ -270,7 +308,12 @@ void updateDigitN(uint8_t digitNo, uint8_t v) {
     seg = B1101111;
   }
 
-  if (digitNo == 4) {
+  if (digitNo == 2) {
+    displayB[0] = displayB[0] | seg << 2;
+    displayB[1] = displayB[1] | (seg & B1000000) >> 6;
+  } else if (digitNo == 3) {
+    displayB[1] = displayB[1] | seg << 1;
+  } else if (digitNo == 4) {
     displayB[2] = displayB[2] | seg << 1;
   }
 }
