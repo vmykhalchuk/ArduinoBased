@@ -32,7 +32,7 @@ void loop() {
     Serial.print(",");
     Serial.print(d10);
     Serial.print(",");
-    Serial.print(d10);
+    Serial.print(d1);
     Serial.print(",");
     Serial.print(d0);
     Serial.println("]");
