@@ -41,6 +41,9 @@ void loop() {
     Serial.print(",");
     Serial.print(d0);
     Serial.println("]");
+
+    // Update segments with digits above
+    
   }
   else
   {
@@ -48,7 +51,8 @@ void loop() {
   }
 
   displayB[0] = 0; displayB[1] = 0; displayB[2] = 0;
-  displayB[s/8] = displayB[s/8] | (1 << (s%8));
+  //displayB[s/8] = displayB[s/8] | (1 << (s%8));
+  updateDigitN(4,s % 10);
 
   // display loop
   for (uint8_t i = 0; i < 50; i++) {
@@ -239,5 +243,34 @@ void setDPinLow(uint8_t p) {
   } else if (p == 6) {
     DDRB = DDRB | B00000100;
     PORTB = PORTB & B11111011;
+  }
+}
+
+void updateDigitN(uint8_t digitNo, uint8_t v) {
+  uint8_t seg = 0;
+  if (v == 0) {
+    seg = B0111111;
+  } else if (v == 1) {
+    seg = B0000110;
+  } else if (v == 2) {
+    seg = B1011011;
+  } else if (v == 3) {
+    seg = B1001111;
+  } else if (v == 4) {
+    seg = B1100110;
+  } else if (v == 5) {
+    seg = B1101101;
+  } else if (v == 6) {
+    seg = B1111101;
+  } else if (v == 7) {
+    seg = B0000111;
+  } else if (v == 8) {
+    seg = B1111111;
+  } else if (v == 9) {
+    seg = B1101111;
+  }
+
+  if (digitNo == 4) {
+    displayB[2] = displayB[2] | seg << 1;
   }
 }
