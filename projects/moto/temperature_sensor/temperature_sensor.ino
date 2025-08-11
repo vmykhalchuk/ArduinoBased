@@ -48,7 +48,7 @@ void loop() {
   }
 
   displayB[0] = 0; displayB[1] = 0; displayB[2] = 0;
-  displayB[s/8] = displayB[s/8] | (1 >> (s%8));
+  displayB[s/8] = displayB[s/8] | (1 << (s%8));
 
   // display loop
   for (uint8_t i = 0; i < 50; i++) {
@@ -56,13 +56,15 @@ void loop() {
       uint8_t b = displayB[j];
       for (uint8_t k = 0; k < 8; k++) {
         clearDAll();
-        uint8_t m = 1 >> k;
-        if (b&m) setDSegment(j * 8 + k);
+        uint8_t m = 1 << k;
+        if (b & m) setDSegment(j * 8 + k);
         delay(1);
       }
     }
   }
 
+  s++;
+  
   //displayDigits(_c++);
   //delay(3000);
 }
