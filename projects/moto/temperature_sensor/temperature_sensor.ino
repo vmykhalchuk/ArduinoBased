@@ -9,10 +9,18 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
 void setup() {
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+  pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+  
   Serial.begin(9600);
   sensors.begin();
 }
 
+int _c = 0;
 void loop() {
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
@@ -41,5 +49,27 @@ void loop() {
   {
     Serial.println("Error: Could not read temperature data");
   }
-  delay(1000);
+  displayDigits(_c++);
+  delay(3000);
+}
+
+
+
+void displayDigits(int c) {
+  c = c % 3; //12;
+  if (c == 0) {
+    digitalWrite(4+1, LOW); digitalWrite(4+2, HIGH);
+    digitalWrite(4+3, HIGH); digitalWrite(4+5, LOW);
+    
+    digitalWrite(4+4, LOW); digitalWrite(4+6, LOW);
+  } else if (c == 1) {
+    digitalWrite(4+1, LOW); digitalWrite(4+3, HIGH);
+    digitalWrite(4+2, LOW); digitalWrite(4+6, HIGH);
+
+    digitalWrite(4+4, LOW); digitalWrite(4+6, LOW);
+  } else if (c == 2) {
+    digitalWrite(4+1, LOW); digitalWrite(4+2, LOW);
+    digitalWrite(4+3, LOW); digitalWrite(4+4, LOW);
+    digitalWrite(4+5, LOW); digitalWrite(4+6, LOW);
+  }
 }
