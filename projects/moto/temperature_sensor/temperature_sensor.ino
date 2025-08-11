@@ -16,6 +16,8 @@ void setup() {
 int _c = 0;
 uint8_t s = 0;
 
+uint8_t displayB[] = {0,0,0};
+
 void loop() {
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
@@ -45,23 +47,22 @@ void loop() {
     Serial.println("Error: Could not read temperature data");
   }
 
-  for (int i = 0; i < 50; i++) {
-    clearDAll();
-    setDSegment(s);
-    delay(1);
-    clearDAll();
-    setDSegment((s+1)%24);
-    delay(1);
-    clearDAll();
-    setDSegment((s+2)%24);
-    delay(1);
-    for (int j = 0; j < (24-3); j++) {
-      clearDAll();
-      delay(1);
+  displayB[0] = 0; displayB[1] = 0; displayB[2] = 0;
+  displayB[s/8] = displayB[s/8] | (1 >> (s%8));
+
+  // display loop
+  for (uint8_t i = 0; i < 50; i++) {
+    for (uint8_t j = 0; j < 3; j++) {
+      uint8_t b = displayB[j];
+      for (uint8_t k = 0; k < 8; k++) {
+        clearDAll();
+        uint8_t m = 1 >> k;
+        if (b&m) setDSegment(j * 8 + k);
+        delay(1);
+      }
     }
   }
-  s++;
-  
+
   //displayDigits(_c++);
   //delay(3000);
 }
