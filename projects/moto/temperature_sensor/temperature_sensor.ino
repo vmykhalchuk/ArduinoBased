@@ -67,6 +67,38 @@ void displayLoop25ms() {
   }
 }
 
+/*
+ Segments: (see KH2441EF-8 pinout.jpg)
+  0 - 1b
+  1 - 1c
+  2 - 2a
+  3 - 2b
+  4 - 2c
+  5 - 2d 
+  6 - 2e
+  7 - 2f
+  8 - 2g
+  9 - 3a
+ 10 - 3b
+ 11 - 3c
+ 12 - 3d
+ 13 - 3e
+ 14 - 3f
+ 15 - 3g
+ 16 - h
+ 17 - 4a
+ 18 - 4b
+ 19 - 4c
+ 20 - 4d
+ 21 - 4e
+ 22 - 4f
+ 23 - 4g
+ 
+ displayBuf0 - 0-7 segments
+ displayBuf1 - 8-15 segments
+ displayBuf2 - 16-23 segments
+
+ */
 void lightDSegment(uint8_t s) {
   if (s == 0) {
     setDPinLow(3); setDPinHigh(4);
