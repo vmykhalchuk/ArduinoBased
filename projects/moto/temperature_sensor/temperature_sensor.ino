@@ -9,149 +9,65 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(9600);
   sensors.begin();
+
+  for (int i = 0; i < 20; i++) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    setDisplayBufToErrorMsg();
+    delay(200);
+    digitalWrite(LED_BUILTIN, LOW);
+    clearDisplayBuf();
+    delay(200);
+  }
 }
 
-int _c = 0;
-uint8_t s = 0;
-
-uint8_t displayB[] = {0,0,0};
+uint8_t displayBuf[] = {0,0,0};
 
 void loop() {
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
+  bool alarm = tempC > 35;
   
   // Check if reading was successful
   if (tempC != DEVICE_DISCONNECTED_C)
   {
-    //Serial.print("Temperature for the device 1 (index 0) is: ");
-    //Serial.println(tempC);
-
-    /*int d100 = (int)(tempC / 100) % 10;
-    int d10 = (int)(tempC / 10) % 10;
-    int d1 = (int)tempC % 10;
-    int d0 = (int)(tempC * 10) % 10;
-    Serial.print("[");
-    Serial.print(d100);
-    Serial.print(",");
-    Serial.print(d10);
-    Serial.print(",");
-    Serial.print(d1);
-    Serial.print(",");
-    Serial.print(d0);
-    Serial.println("]");*/
-    updateDisplayWithFloatWithOneDecimal(tempC);
-
-    // Update segments with digits above
-    
+    setDisplayBufToFloatWithOneDecimal(tempC);
   }
   else
   {
     Serial.println("Error: Could not read temperature data");
   }
 
-  //displayB[0] = 0; displayB[1] = 0; displayB[2] = 0;
-  //displayB[s/8] = displayB[s/8] | (1 << (s%8));
-  /*updateDigitN(2,s % 10);
-  updateDigitN(3,(s+1) % 10);
-  updateDigitN(4,(s+2) % 10);*/
-
-  /*if (s % 3 == 0) updateDisplay(0,0,3,4,true);
-  if (s % 3 == 1) updateDisplay(0,4,3,9,true);
-  if (s % 3 == 2) updateDisplay(0,0,2,7,false);*/
-
   // display loop
-  for (uint8_t i = 0; i < 200; i++) {
-    for (uint8_t j = 0; j < 3; j++) {
-      uint8_t b = displayB[j];
-      for (uint8_t k = 0; k < 8; k++) {
-        clearDAll();
-        uint8_t m = 1 << k;
-        if (b & m) setDSegment(j * 8 + k);
-        delay(1);
-      }
+  for (int outerI = 0; outerI < 4; outerI++) {
+    if (alarm) {
+      if (outerI%2 == 0) digitalWrite(LED_BUILTIN, HIGH);
+      else digitalWrite(LED_BUILTIN, LOW);
     }
+    for (uint8_t i = 0; i < 50; i++) displayLoop25ms();
   }
   clearDAll();
-
-  s++;
-  
-  //displayDigits(_c++);
-  //delay(3000);
 }
 
 
 // Display input->Arduino port: 1->D5;2->D6;3->D7;4->B0;5->B1;6->B2
 
-void displayDigits(int c) {
-  c = c % 6; //12;
-  if (c == 0) {
-    setDPin(1,LOW); setDPin(2,HIGH);
-    clearDPin(3); clearDPin(5);//setDPin(3,LOW); setDPin(5,HIGH);
-    clearDPin(4); clearDPin(6);
-  } else if (c == 1) {
-    setDPin(1,LOW); setDPin(3,HIGH);
-    clearDPin(2); clearDPin(6);//setDPin(2,LOW); setDPin(6,HIGH);
-    clearDPin(4); clearDPin(5);
-  } else if (c == 2) {
-    clearDPin(1); clearDPin(2);
-    clearDPin(3); clearDPin(4);
-    clearDPin(5); clearDPin(6);
-    
-  } else if (c == 3) {
-    setDPin(1,LOW); setDPin(2,HIGH);
-    setDPin(3,LOW); setDPin(5,HIGH);
-    clearDPin(4); clearDPin(6);
-  } else if (c == 4) {
-    setDPin(1,LOW); setDPin(3,HIGH);
-    setDPin(2,LOW); setDPin(6,HIGH);
-    clearDPin(4); clearDPin(5);
-  } else if (c == 5) {
-    clearDPin(1); clearDPin(2);
-    clearDPin(3); clearDPin(4);
-    clearDPin(5); clearDPin(6);
+// takes around 25ms to execute
+void displayLoop25ms() {
+  for (uint8_t j = 0; j < 3; j++) {
+    uint8_t b = displayBuf[j];
+    for (uint8_t k = 0; k < 8; k++) {
+      clearDAll();
+      uint8_t m = 1 << k;
+      if (b & m) lightDSegment(j * 8 + k);
+      delay(1);
+    }
   }
 }
 
-void setDPin(uint8_t p, uint8_t setHigh) {
-  if (p == 1) {
-    DDRD = DDRD | B00100000;
-    if (setHigh == HIGH) PORTD = PORTD | B00100000; else PORTD = PORTD & B11011111;
-  } else if (p == 2) {
-    DDRD = DDRD | B01000000;
-    if (setHigh == HIGH) PORTD = PORTD | B01000000; else PORTD = PORTD & B10111111;
-  } else if (p == 3) {
-    DDRD = DDRD | B10000000;
-    if (setHigh == HIGH) PORTD = PORTD | B10000000; else PORTD = PORTD & B01111111;
-  } else if (p == 4) {
-    DDRB = DDRB | B00000001;
-    if (setHigh == HIGH) PORTB = PORTB | B00000001; else PORTB = PORTB & B11111110;
-  } else if (p == 5) {
-    DDRB = DDRB | B00000010;
-    if (setHigh == HIGH) PORTB = PORTB | B00000010; else PORTB = PORTB & B11111101;
-  } else if (p == 6) {
-    DDRB = DDRB | B00000100;
-    if (setHigh == HIGH) PORTB = PORTB | B00000100; else PORTB = PORTB & B11111011;
-  }
-}
-void clearDPin(uint8_t p) {
-  if (p == 1) {
-    DDRD = DDRD & B11011111;
-  } else if (p == 2) {
-    DDRD = DDRD & B10111111;
-  } else if (p == 3) {
-    DDRD = DDRD & B01111111;
-  } else if (p == 4) {
-    DDRB = DDRB & B11111110;
-  } else if (p == 5) {
-    DDRB = DDRB & B11111101;
-  } else if (p == 6) {
-    DDRB = DDRB & B11111011;
-  }
-}
-
-void setDSegment(uint8_t s) {
+void lightDSegment(uint8_t s) {
   if (s == 0) {
     setDPinLow(3); setDPinHigh(4);
   } else if (s == 1) {
@@ -254,37 +170,53 @@ void setDPinLow(uint8_t p) {
   }
 }
 
-void updateDisplayWithFloatWithOneDecimal(float f) {
+void setDisplayBufToFloatWithOneDecimal(float f) {
   int d100 = (int)(f / 100) % 10;
   int d10 = (int)(f / 10) % 10;
   int d1 = (int)f % 10;
   int d0 = (int)(f * 10) % 10;
   if (d100 < 2) {
-    updateDisplay(d100,d10,d1,d0,true);
+    setDisplayBuf(d100,d10,d1,d0,true);
   } else {
-    updateDisplay(0,9,9,9,false);
+    setDisplayBuf(0,9,9,9,false);
   }
 }
 
-void updateDisplay(uint8_t dig1, uint8_t dig2, uint8_t dig3, uint8_t dig4, bool point) {
-  displayB[0] = 0; displayB[1] = 0; displayB[2] = 0;
+void setDisplayBuf(uint8_t dig1, uint8_t dig2, uint8_t dig3, uint8_t dig4, bool point) {
+  clearDisplayBuf();
   
-  updateDigitN(4, dig4);
+  updateDisplayBufDigitN(4, dig4);
   if (dig3 != 0 || point || dig1 != 0 || dig2 != 0) {
-    updateDigitN(3, dig3);
+    updateDisplayBufDigitN(3, dig3);
   }
   if ((dig2 != 0) || (dig1 != 0)) {
-    updateDigitN(2, dig2);
+    updateDisplayBufDigitN(2, dig2);
   }
   if (dig1 == 1) {
-    displayB[0] = displayB[0] | B0000011;
+    displayBuf[0] = displayBuf[0] | B0000011;
   }
   if (point) {
-    displayB[2] = displayB[2] | B0000001;
+    displayBuf[2] = displayBuf[2] | B0000001;
   }
 }
 
-void updateDigitN(uint8_t digitNo, uint8_t v) {
+// Err will be displayed
+void setDisplayBufToErrorMsg() {
+  clearDisplayBuf();
+
+  // segments to light: E: 2,5,6,7,8; r: 13,15; r: 21,23
+  displayBuf[0] = B11100100;
+  displayBuf[1] = B10100001;
+  displayBuf[2] = B10100000;
+}
+
+void clearDisplayBuf() {
+  displayBuf[0] = 0; displayBuf[1] = 0; displayBuf[2] = 0;
+}
+
+// digitNo: [1;4]
+// value:[0;9]; if digitNo==1 value: [0;1]
+void updateDisplayBufDigitN(uint8_t digitNo, uint8_t v) {
   uint8_t seg = 0;
   if (v == 0) {
     seg = B0111111;
@@ -309,11 +241,11 @@ void updateDigitN(uint8_t digitNo, uint8_t v) {
   }
 
   if (digitNo == 2) {
-    displayB[0] = displayB[0] | seg << 2;
-    displayB[1] = displayB[1] | (seg & B1000000) >> 6;
+    displayBuf[0] = displayBuf[0] | seg << 2;
+    displayBuf[1] = displayBuf[1] | (seg & B1000000) >> 6;
   } else if (digitNo == 3) {
-    displayB[1] = displayB[1] | seg << 1;
+    displayBuf[1] = displayBuf[1] | seg << 1;
   } else if (digitNo == 4) {
-    displayB[2] = displayB[2] | seg << 1;
+    displayBuf[2] = displayBuf[2] | seg << 1;
   }
 }
