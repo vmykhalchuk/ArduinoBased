@@ -16,10 +16,10 @@ void setup() {
   for (int i = 0; i < 20; i++) {
     digitalWrite(LED_BUILTIN, HIGH);
     setDisplayBufToErrorMsg();
-    delay(200);
+    for (uint8_t i = 0; i < 5; i++) displayLoop25ms();
     digitalWrite(LED_BUILTIN, LOW);
     clearDisplayBuf();
-    delay(200);
+    for (uint8_t i = 0; i < 5; i++) displayLoop25ms();
   }
 }
 
