@@ -8,7 +8,7 @@ int melody[] = {
 };
 
 // note durations: 4 = quarter note, 8 = eighth note, etc.:
-int noteDurations[] = {
+uint8_t noteDurations[] = {
   8, 8, 4, 8, 8, 4, 8, 8, 8, 8, 2, 8, 8, 8, 8, 4, 8, 8, 8, 8, 4, 8, 8, 8, 2 // Jingle bells
   //8, 8, 8, 8, 8, 8, 8, 8 // Roman's
   //4, 8, 8, 4, 4, 4, 4, 4 // Original
@@ -23,7 +23,7 @@ void setup() {
 void loop() {
   // iterate over the notes of the melody:
 
-  for (int thisNote = 0; thisNote < 8; thisNote++) {
+  for (int thisNote = 0; thisNote < sizeof(noteDurations); thisNote++) {
 
     // to calculate the note duration, take one second divided by the note type.
 
