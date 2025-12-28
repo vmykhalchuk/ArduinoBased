@@ -2,14 +2,16 @@
 
 // notes in the melody:
 int melody[] = {
-  NOTE_A1, NOTE_B1, NOTE_C2, NOTE_D3, NOTE_E4, 0, NOTE_F5, NOTE_G6
-  //NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
+  NOTE_E4, NOTE_E4, NOTE_E4, NOTE_E4, NOTE_E4, NOTE_E4, NOTE_E4, NOTE_G4, NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_F4, NOTE_F4, NOTE_F4, NOTE_F4, NOTE_E4, NOTE_E4, NOTE_E4, NOTE_E4, NOTE_E4, NOTE_D4, NOTE_D4, NOTE_E4, NOTE_D4, NOTE_G4 // Jingle bells
+  //NOTE_A1, NOTE_B1, NOTE_C2, NOTE_D3, NOTE_E4, 0, NOTE_F5, NOTE_G6 // Roman's
+  //NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4 // Original
 };
 
 // note durations: 4 = quarter note, 8 = eighth note, etc.:
 int noteDurations[] = {
-  8, 8, 8, 8, 8, 8, 8, 8
-  //4, 8, 8, 4, 4, 4, 4, 4
+  8, 8, 4, 8, 8, 4, 8, 8, 8, 8, 2, 8, 8, 8, 8, 4, 8, 8, 8, 8, 4, 8, 8, 8, 2 // Jingle bells
+  //8, 8, 8, 8, 8, 8, 8, 8 // Roman's
+  //4, 8, 8, 4, 4, 4, 4, 4 // Original
 };
 
 const int pinZoomer = 4;
