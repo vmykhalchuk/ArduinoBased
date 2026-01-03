@@ -50,7 +50,7 @@ void setup(void)
 
 #define isdigit(n) (n >= '0' && n <= '9')
 
-void play_rtttl(char *p)
+void play_rtttl(const char *p)
 {
   // Absolutely no error checking in here
 
