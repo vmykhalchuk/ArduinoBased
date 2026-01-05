@@ -292,23 +292,28 @@ void loop(void)
         startMs = millis();
         longPress = true;
       }
+      if (longPress && (millis() - startMs >= LONG_PRESS__CONFIRM_TIME_MS)) noTone(buzzerPin);
     } // wait till it drops to LOW
+
     if (longPress) {
       unsigned long diffMs = millis() - startMs;
       if (diffMs < LONG_PRESS__CONFIRM_TIME_MS) delay(LONG_PRESS__CONFIRM_TIME_MS - diffMs);
       noTone(buzzerPin);
 
       playShort = !playShort;
+      
+    } else {
+      for (byte i = 0; i < 3; i++) {
+        delay(50);
+        tone(buzzerPin, MELODY_CHANGE__CONFIRM_TONE);
+        delay(50);
+        noTone(buzzerPin);
+      }
+      
+      melodyNo++;
+      if (melodyNo >= melodiesCount) melodyNo = 0;
     }
-    for (byte i = 0; i < 3; i++) {
-      delay(50);
-      tone(buzzerPin, MELODY_CHANGE__CONFIRM_TONE);
-      delay(50);
-      noTone(buzzerPin);
-    }
-    delay(300);
-    
-    melodyNo++;
-    if (melodyNo >= melodiesCount) melodyNo = 0;
+
+    delay(500);
   }
 }
