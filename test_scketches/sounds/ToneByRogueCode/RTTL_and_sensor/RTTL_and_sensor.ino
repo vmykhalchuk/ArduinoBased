@@ -12,6 +12,7 @@
 const int buzzerPin = 4;
 const int moveSensorPin = A7; // < 200 - not pressed
 const int buttonPin = A5; // LOW - not pressed - HIGH - pressed
+const int PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS = 30000;
 
 #define OCTAVE_OFFSET 0
 
@@ -73,7 +74,8 @@ bool delayAndWaitForLowSignal(int pin, int _delay) {
   return false;
 }
 
-bool play_rtttl(char *p)
+// limit - 0 - no limit, >1000 - approx millis limit, <1000 - how many notes to play
+bool play_rtttl(char *p, int limit)
 {
   // Absolutely no error checking in here
 
@@ -139,6 +141,17 @@ bool play_rtttl(char *p)
   Serial.print("wn: "); Serial.println(wholenote, 10);
 
 
+  /*int limitType;
+  if (limit == 0) limitType = 0;
+  else if (limit < 1000) limitType = 1;
+  else limitType = 2;*/
+
+  int limitTimeMs = limit >= 1000 ? limit : 0;
+  int limitNotes = limit < 1000 ? limit : 0;
+
+  int playedTimeStartMs = millis();
+  int playedNotes = 0;
+  
   // now begin note loop
   while(*p)
   {
@@ -226,12 +239,23 @@ bool play_rtttl(char *p)
       noTone(buzzerPin);
       return true;
     }
+
+    playedNotes++;
+    if (limitNotes != 0 && playedNotes >= limitNotes) break;
+
+    if (limitTimeMs != 0) {
+      if (millis() - playedTimeStartMs >= limitTimeMs) break;
+    }
   }
   return false;
 }
 
 
+
+
 int melodyNo = 0;
+
+int lastTimeTriggeredMs = millis();
 
 void loop(void)
 {
@@ -239,10 +263,15 @@ void loop(void)
      // wait for sensor to trigger song
   }
 
+  int currentTimeMs = millis();
+  bool recentlyPlayed = currentTimeMs - lastTimeTriggeredMs > PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS;
+  if (recentlyPlayed) lastTimeTriggeredMs = currentTimeMs;
+
   strcpy_P(buffer, melodies[melodyNo%melodiesCount]);
-  bool res = play_rtttl(buffer);
+  bool res = play_rtttl(buffer, recentlyPlayed ? 2500 : 0);
 
   if (res) {
+    lastTimeTriggeredMs -= PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS + 1;
     while (digitalRead(buttonPin) == HIGH) {} // wait till it drops to LOW
     delay(500);
     for (int i = 0; i < 3; i++) {
