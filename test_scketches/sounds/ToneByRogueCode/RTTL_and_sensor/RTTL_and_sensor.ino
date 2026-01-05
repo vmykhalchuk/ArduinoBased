@@ -12,7 +12,8 @@
 const int buzzerPin = 4;
 const int moveSensorPin = A7; // < 200 - not pressed
 const int buttonPin = A5; // LOW - not pressed - HIGH - pressed
-const int PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS = 30000;
+const unsigned long PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS = 30000;
+const unsigned long DELAY_BETWEEN_SONGS_MIN_MS = 1500;
 
 #define OCTAVE_OFFSET 0
 
@@ -247,7 +248,8 @@ bool play_rtttl(char *p, int limit)
       if (millis() - playedTimeStartMs >= limitTimeMs) break;
     }
   }
-  return false;
+  return delayAndWaitForLowSignal(buttonPin, DELAY_BETWEEN_SONGS_MIN_MS); // delay between songs
+  //return false;
 }
 
 
@@ -255,7 +257,7 @@ bool play_rtttl(char *p, int limit)
 
 int melodyNo = 0;
 
-int lastTimeTriggeredMs = millis();
+unsigned long lastTimeTriggeredMs = millis();
 
 void loop(void)
 {
@@ -263,18 +265,19 @@ void loop(void)
      // wait for sensor to trigger song
   }
 
-  int currentTimeMs = millis();
-  bool recentlyPlayed = currentTimeMs - lastTimeTriggeredMs > PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS;
+  unsigned long currentTimeMs = millis();
+  bool recentlyPlayed = (currentTimeMs - lastTimeTriggeredMs) < PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS;
   if (recentlyPlayed) lastTimeTriggeredMs = currentTimeMs;
 
   strcpy_P(buffer, melodies[melodyNo%melodiesCount]);
+  if (!recentlyPlayed) play_rtttl(buffer, 5);
   bool res = play_rtttl(buffer, recentlyPlayed ? 2500 : 0);
 
   if (res) {
     lastTimeTriggeredMs -= PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS + 1;
     while (digitalRead(buttonPin) == HIGH) {} // wait till it drops to LOW
     delay(500);
-    for (int i = 0; i < 3; i++) {
+    for (byte i = 0; i < 3; i++) {
       delay(100);
       tone(buzzerPin, 800);
       delay(70);
