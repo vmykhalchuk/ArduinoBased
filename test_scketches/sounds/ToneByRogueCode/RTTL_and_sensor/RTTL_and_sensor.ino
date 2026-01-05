@@ -26,22 +26,21 @@ NOTE_C7, NOTE_CS7, NOTE_D7, NOTE_DS7, NOTE_E7, NOTE_F7, NOTE_FS7, NOTE_G7, NOTE_
 
 char buffer[1000];
 
-const char m_StarWars_short[] PROGMEM = "d=4,o=5,b=45:32p,32f#,32f#,32f#,8b.,8f#.6,32e6";
-const char m_MissionImp_short[] PROGMEM = "d=16,o=6,b=95:32d,32d#,32d,32d#,32d,32d#,32d,32d#,32d,32d,32d#,32e,32f,32f#,32g,g,8p,g";
-const char m_Smurfs_short[] PROGMEM = "d=32,o=5,b=200:4c#6,16p,4f#6,p,16c#6,p";
-
 const char m_ATeam[] PROGMEM = "d=8,o=5,b=125:4d#6,a#,2d#6,16p,g#,4a#,4d#.,p,16g,16a#,d#6,a#,f6,2d#6,16p,c#.6,16c6,16a#,g#.,2a#";
 const char m_MissionImp[] PROGMEM = "d=16,o=6,b=95:32d,32d#,32d,32d#,32d,32d#,32d,32d#,32d,32d,32d#,32e,32f,32f#,32g,g,8p,g,8p,a#,p,c7,p,g,8p,g,8p,f,p,f#,p,g,8p,g,8p,a#,p,c7,p,g,8p,g,8p,f,p,f#,p,a#,g,2d,32p,a#,g,2c#,32p,a#,g,2c,a#5,8c,2p,32p,a#5,g5,2f#,32p,a#5,g5,2f,32p,a#5,g5,2e,d#,8d";
 const char m_Smurfs[] PROGMEM = "d=32,o=5,b=200:4c#6,16p,4f#6,p,16c#6,p,8d#6,p,8b,p,4g#,16p,4c#6,p,16a#,p,8f#,p,8a#,p,4g#,4p,g#,p,a#,p,b,p,c6,p,4c#6,16p,4f#6,p,16c#6,p,8d#6,p,8b,p,4g#,16p,4c#6,p,16a#,p,8b,p,8f,p,4f#";
+
+const char m_Bond[] PROGMEM = "d=4,o=5,b=80:32p,16c#6,32d#6,32d#6,16d#6,8d#6,16c#6,16c#6,16c#6,16c#6,32e6,32e6,16e6,8e6,16d#6,16d#6,16d#6,16c#6,32d#6,32d#6,16d#6,8d#6,16c#6,16c#6,16c#6,16c#6,32e6,32e6,16e6,8e6,16d#6,16d6,16c#6,16c#7,c.7,16g#6,16f#6,g#.6";
+const char m_StarWars[] PROGMEM = "d=4,o=5,b=45:32p,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#.6,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#6";
+const char m_TopGun[] PROGMEM = "d=4,o=4,b=31:32p,16c#,16g#,16g#,32f#,32f,32f#,32f,16d#,16d#,32c#,32d#,16f,32d#,32f,16f#,32f,32c#,16f,d#,16c#,16g#,16g#,32f#,32f,32f#,32f,16d#,16d#,32c#,32d#,16f,32d#,32f,16f#,32f,32c#,g#";
+
 const char m_Indiana[] PROGMEM = "d=4,o=5,b=250:e,8p,8f,8g,8p,1c6,8p.,d,8p,8e,1f,p.,g,8p,8a,8b,8p,1f6,p,a,8p,8b,2c6,2d6,2e6,e,8p,8f,8g,8p,1c6,p,d6,8p,8e6,1f.6,g,8p,8g,e.6,8p,d6,8p,8g,e.6,8p,d6,8p,8g,f.6,8p,e6,8p,8d6,2c6";
 const char m_TakeOnMe[] PROGMEM = "d=4,o=4,b=160:8f#5,8f#5,8f#5,8d5,8p,8b,8p,8e5,8p,8e5,8p,8e5,8g#5,8g#5,8a5,8b5,8a5,8a5,8a5,8e5,8p,8d5,8p,8f#5,8p,8f#5,8p,8f#5,8e5,8e5,8f#5,8e5,8f#5,8f#5,8f#5,8d5,8p,8b,8p,8e5,8p,8e5,8p,8e5,8g#5,8g#5,8a5,8b5,8a5,8a5,8a5,8e5,8p,8d5,8p,8f#5,8p,8f#5,8p,8f#5,8e5,8e5";
 const char m_Entertainer[] PROGMEM = "d=4,o=5,b=140:8d,8d#,8e,c6,8e,c6,8e,2c.6,8c6,8d6,8d#6,8e6,8c6,8d6,e6,8b,d6,2c6,p,8d,8d#,8e,c6,8e,c6,8e,2c.6,8p,8a,8g,8f#,8a,8c6,e6,8d6,8c6,8a,2d6";
 const char m_Xfiles[] PROGMEM = "d=4,o=5,b=125:e,b,a,b,d6,2b.,1p,e,b,a,b,e6,2b.,1p,g6,f#6,e6,d6,e6,2b.,1p,g6,f#6,e6,d6,f#6,2b.,1p,e,b,a,b,d6,2b.,1p,e,b,a,b,e6,2b.,1p,e6,2b.";
 const char m_Looney[] PROGMEM = "d=4,o=5,b=140:32p,c6,8f6,8e6,8d6,8c6,a.,8c6,8f6,8e6,8d6,8d#6,e.6,8e6,8e6,8c6,8d6,8c6,8e6,8c6,8d6,8a,8c6,8g,8a#,8a,8f";
 const char m_20thCenFox[] PROGMEM = "d=16,o=5,b=140:b,8p,b,b,2b,p,c6,32p,b,32p,c6,32p,b,32p,c6,32p,b,8p,b,b,b,32p,b,32p,b,32p,b,32p,b,32p,b,32p,b,32p,g#,32p,a,32p,b,8p,b,b,2b,4p,8e,8g#,8b,1c#6,8f#,8a,8c#6,1e6,8a,8c#6,8e6,1e6,8b,8g#,8a,2b";
-const char m_Bond[] PROGMEM = "d=4,o=5,b=80:32p,16c#6,32d#6,32d#6,16d#6,8d#6,16c#6,16c#6,16c#6,16c#6,32e6,32e6,16e6,8e6,16d#6,16d#6,16d#6,16c#6,32d#6,32d#6,16d#6,8d#6,16c#6,16c#6,16c#6,16c#6,32e6,32e6,16e6,8e6,16d#6,16d6,16c#6,16c#7,c.7,16g#6,16f#6,g#.6";
-const char m_StarWars[] PROGMEM = "d=4,o=5,b=45:32p,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#.6,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#6";
-const char m_TopGun[] PROGMEM = "d=4,o=4,b=31:32p,16c#,16g#,16g#,32f#,32f,32f#,32f,16d#,16d#,32c#,32d#,16f,32d#,32f,16f#,32f,32c#,16f,d#,16c#,16g#,16g#,32f#,32f,32f#,32f,16d#,16d#,32c#,32d#,16f,32d#,32f,16f#,32f,32c#,g#";
+
 const char m_Flinstones[] PROGMEM = "d=4,o=5,b=40:32p,16f6,16a#,16a#6,32g6,16f6,16a#.,16f6,32d#6,32d6,32d6,32d#6,32f6,16a#,16c6,d6,16f6,16a#.,16a#6,32g6,16f6,16a#.,32f6,32f6,32d#6,32d6,32d6,32d#6,32f6,16a#,16c6,a#,16a6,16d.6,16a#6,32a6,32a6,32g6,32f#6,32a6,8g6,16g6,16c.6,32a6,32a6,32g6,32g6,32f6,32e6,32g6,8f6,16f6,16a#.,16a#6,32g6,16f6,16a#.,16f6,32d#6,32d6,32d6,32d#6,32f6,16a#,16c.6,32d6,32d#6,32f6,16a#,16c.6,32d6,32d#6,32f6,16a#6,16c7,8a#.6";
 const char m_Jeopardy[] PROGMEM = "d=4,o=6,b=125:c,f,c,f5,c,f,2c,c,f,c,f,a.,8g,8f,8e,8d,8c#,c,f,c,f5,c,f,2c,f.,8d,c,a#5,a5,g5,f5,p,d#,g#,d#,g#5,d#,g#,2d#,d#,g#,d#,g#,c.7,8a#,8g#,8g,8f,8e,d#,g#,d#,g#5,d#,g#,2d#,g#.,8f,d#,c#,c,p,a#5,p,g#.5,d#,g#";
 const char m_Gadget[] PROGMEM = "d=16,o=5,b=50:32d#,32f,32f#,32g#,a#,f#,a,f,g#,f#,32d#,32f,32f#,32g#,a#,d#6,4d6,32d#,32f,32f#,32g#,a#,f#,a,f,g#,f#,8d#";
@@ -53,15 +52,13 @@ const char m_TheSimpsons[] PROGMEM = "d=4,o=5,b=160:c.6,e6,f#6,8a6,g.6,e6,c6,8a,
 const char m_Muppets[] PROGMEM = "d=4,o=5,b=250:c6,c6,a,b,8a,b,g,p,c6,c6,a,8b,8a,8p,g.,p,e,e,g,f,8e,f,8c6,8c,8d,e,8e,8e,8p,8e,g,2p,c6,c6,a,b,8a,b,g,p,c6,c6,a,8b,a,g.,p,e,e,g,f,8e,f,8c6,8c,8d,e,8e,d,8d,c";
 
 const char* melodies[] = {
-  m_StarWars_short, m_MissionImp_short, m_Smurfs_short,
-  
   m_ATeam, m_MissionImp, m_Smurfs,
+  m_Bond, m_StarWars, m_TopGun,
   
   m_Indiana, m_TakeOnMe, m_Entertainer, m_Xfiles, m_Looney, m_20thCenFox,
-  m_Bond, m_StarWars, m_TopGun, m_Flinstones,
-  m_Jeopardy, m_Gadget, m_GoodBad, m_MASH, m_MahnaMahna, m_LeisureSuit, m_TheSimpsons, m_Muppets
+  m_Flinstones, m_Jeopardy, m_Gadget, m_GoodBad, m_MASH, m_MahnaMahna, m_LeisureSuit, m_TheSimpsons, m_Muppets
 };
-const int melodiesCount = 24;
+const int melodiesCount = 21;
 
 
 void setup(void)
@@ -256,16 +253,21 @@ bool play_rtttl(char *p, int limit)
       if ((millis() - playedTimeStartMs) >= limitTimeMs) break;
     }
   }
+  
   return delayAndWaitForLowSignal(buttonPin, DELAY_BETWEEN_SONGS_MIN_MS); // delay between songs
-  //return false;
 }
 
 
-
-
 int melodyNo = 0;
+bool playShort = true;
 
 unsigned long lastTimeTriggeredMs = millis() - (PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS + 1);
+
+unsigned int LONG_PRESS__DELAY_MS = 1500;
+unsigned int LONG_PRESS__CONFIRM_TONE = 1200;
+unsigned int LONG_PRESS__CONFIRM_TIME_MS = 250;
+
+unsigned int MELODY_CHANGE__CONFIRM_TONE = 800;
 
 void loop(void)
 {
@@ -278,20 +280,33 @@ void loop(void)
   lastTimeTriggeredMs = currentTimeMs;
 
   strcpy_P(buffer, melodies[melodyNo%melodiesCount]);
-  //if (!recentlyPlayed) play_rtttl(buffer, 5);
-  bool res = play_rtttl(buffer, recentlyPlayed ? 2500 : 0);
+  bool res = play_rtttl(buffer, (playShort || recentlyPlayed) ? 2200 : 0);
 
   if (res) {
+    unsigned long startMs = millis();
     lastTimeTriggeredMs -= PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS + 1;
-    while (digitalRead(buttonPin) == HIGH) {} // wait till it drops to LOW
-    delay(500);
+    bool longPress = false;
+    while (digitalRead(buttonPin) == HIGH) {
+      if (!longPress && (millis() - startMs > LONG_PRESS__DELAY_MS)) {
+        tone(buzzerPin, LONG_PRESS__CONFIRM_TONE);
+        startMs = millis();
+        longPress = true;
+      }
+    } // wait till it drops to LOW
+    if (longPress) {
+      unsigned long diffMs = millis() - startMs;
+      if (diffMs < LONG_PRESS__CONFIRM_TIME_MS) delay(LONG_PRESS__CONFIRM_TIME_MS - diffMs);
+      noTone(buzzerPin);
+
+      playShort = !playShort;
+    }
     for (byte i = 0; i < 3; i++) {
-      delay(100);
-      tone(buzzerPin, 800);
-      delay(70);
+      delay(50);
+      tone(buzzerPin, MELODY_CHANGE__CONFIRM_TONE);
+      delay(50);
       noTone(buzzerPin);
     }
-    delay(1500);
+    delay(300);
     
     melodyNo++;
     if (melodyNo >= melodiesCount) melodyNo = 0;
