@@ -15,7 +15,6 @@ const int moveSensorPin = A7; // < 200 - not pressed
 const int buttonPin = A5; // LOW - not pressed - HIGH - pressed
 const unsigned int PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS = 60000;
 const unsigned int DELAY_BETWEEN_SONGS_MIN_MS = 1500;
-const unsigned int VIBRO_CONFIRM_MS = 300;
 
 #define OCTAVE_OFFSET 0
 
@@ -266,11 +265,12 @@ bool playShort = true;
 
 unsigned long lastTimeTriggeredMs = millis() - (PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS + 1);
 
-unsigned int LONG_PRESS__DELAY_MS = 1500;
-unsigned int LONG_PRESS__CONFIRM_TONE = 1200;
-unsigned int LONG_PRESS__CONFIRM_TIME_MS = 250;
+const unsigned int VIBRO_CONFIRM_MS = 150;
+const unsigned int LONG_PRESS__DELAY_MS = 1500;
+const unsigned int LONG_PRESS__CONFIRM_TONE = 1200;
+const unsigned int LONG_PRESS__CONFIRM_TIME_MS = 250;
 
-unsigned int MELODY_CHANGE__CONFIRM_TONE = 800;
+const unsigned int MELODY_CHANGE__CONFIRM_TONE = 800;
 
 void loop(void)
 {
@@ -283,7 +283,7 @@ void loop(void)
   lastTimeTriggeredMs = currentTimeMs;
 
   strcpy_P(buffer, melodies[melodyNo%melodiesCount]);
-  // res becomes true when button pressed
+  // res becomes true when buttonPin becomes HIGH
   bool res = play_rtttl(buffer, (playShort || recentlyPlayed) ? 2200 : 0);
 
   if (res) {
@@ -293,6 +293,7 @@ void loop(void)
     unsigned long startMs = millis();
     lastTimeTriggeredMs -= PLAY_SHORT_TUNE_BEFORE_TIMEPASSED_MS + 1;
     bool longPress = false;
+    // wait till buttonPin drops to LOW
     while (digitalRead(buttonPin) == HIGH) {
       unsigned long passedMs = millis() - startMs;
       if (vibroOn && (passedMs > VIBRO_CONFIRM_MS)) {
@@ -302,12 +303,13 @@ void loop(void)
       if (!longPress && (passedMs > LONG_PRESS__DELAY_MS)) {
         tone(buzzerPin, LONG_PRESS__CONFIRM_TONE);
         startMs = millis();
+        passedMs = 0;
         longPress = true;
       }
       if (longPress && (passedMs >= LONG_PRESS__CONFIRM_TIME_MS)) {
         noTone(buzzerPin);
       }
-    } // wait till it drops to LOW
+    }
     if (vibroOn) digitalWrite(vibroPin, LOW);
 
     if (longPress) {
