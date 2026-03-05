@@ -1,4 +1,4 @@
-#define DS18B20_PIN 2
+#define DS18B20_PIN 4
 
 void setup() {
   Serial.begin(9600);
