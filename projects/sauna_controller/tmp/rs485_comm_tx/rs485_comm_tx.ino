@@ -1,4 +1,4 @@
- int pinRE = 3;
+int pinRE = 3;
 int pinDE = 4;
 
 void setup() {
@@ -13,7 +13,7 @@ void setup() {
 
 int i = 1;
 void loop() {
-  Serial.write(i)
+  Serial.write(i);
   if (i == 5) i = 1; else i++;
   delay(3000);
 }
