@@ -1,0 +1,48 @@
+/*
+ * Manual CRC-8 Calculation (Polynomial: 0x07)
+ */
+
+void setup() {
+  Serial.begin(9600);
+
+  // Example data array
+  uint8_t myData[] = {0x01, 0x02, 0x03, 0x04};
+  uint8_t dataLength = sizeof(myData);
+
+  // Calculate CRC
+  uint8_t crcResult = computeCRC8(myData, dataLength);
+
+  // Print results
+  Serial.print("Data: ");
+  for(int i=0; i<dataLength; i++) {
+    Serial.print(myData[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.print("\nComputed CRC-8: 0x");
+  Serial.println(crcResult, HEX);
+}
+
+void loop() {
+  // Nothing to repeat
+}
+
+// The core CRC-8 function
+uint8_t computeCRC8(uint8_t *data, size_t len) {
+  uint8_t crc = 0x00; // Initial value (Some protocols start with 0xFF)
+
+  for (size_t i = 0; i < len; i++) {
+    crc ^= data[i]; // XOR the next byte into the register
+
+    for (uint8_t j = 0; j < 8; j++) {
+      if (crc & 0x80) { // If the MSB is 1
+                        // the most common CRC-8 polynomial: x^8 + x^2 + x^1 + 1,
+                        // which is represented by the hex value 0x07.
+                        // 0x07 <- ATM/SMBus standard; 0x31 <- Dallas/Maxim
+        crc = (crc << 1) ^ 0x07; // Shift left and XOR with polynomial
+      } else {
+        crc <<= 1; // Just shift left
+      }
+    }
+  }
+  return crc;
+}

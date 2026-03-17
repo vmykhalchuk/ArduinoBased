@@ -1,0 +1,98 @@
+#include "rs485_client.h"
+#include "crc8.h"
+
+int RS485Client::rs485_errorCode = 0;
+
+bool rs_pinDirIsSet = false;
+int rs_pinDir = 0;
+bool rs_f1=false, rs_f2=false, rs_f3=false, rs_f4=false;
+
+RS485Client::StateRS485 currentStateRS485 = RS485Client::RS485_IDLE;
+
+unsigned long timerMark = 0;
+int retryCount = 0;
+
+void RS485Client::initRS485Client(int pinDir) {
+  rs_pinDir = pinDir;
+  rs_pinDirIsSet = true;
+  pinMode(pinDir, OUTPUT);
+  digitalWrite(pinDir, HIGH);
+}
+
+void RS485Client::rs485ClientUpdateFlags(bool f1, bool f2, bool f3, bool f4) {
+  rs_f1 = f1;
+  rs_f2 = f2;
+  rs_f3 = f2;
+  rs_f4 = f4;
+}
+
+static void rs485SendPacket() {
+  if (!rs_pinDirIsSet) {
+    RS485Client::rs485_errorCode = 0x10;
+    return;
+  }
+
+  bool f1 = rs_f1, f2 = rs_f2, f3 = rs_f3, f4 = rs_f4;
+  
+  uint8_t b1 = (f1 << 7) | (f2 << 6) | (f3 << 5) | (f4 << 4) | (!f1 << 3) | (!f2 << 2) | (!f3 << 1) | !f4;
+  uint8_t b2 = (!f1 << 7) | (!f2 << 6) | (!f3 << 5) | (!f4 << 4) | (f1 << 3) | (f2 << 2) | (f3 << 1) | f4;
+  uint8_t payload[2] = {b1, b2};
+  uint8_t crc = calculateCRC8(payload, 2);
+
+  digitalWrite(rs_pinDir, LOW);
+  Serial.write(b1);
+  Serial.write(b2);
+  Serial.write(crc);
+  Serial.flush();
+  // Performance improvement:
+  //   Use my_serial
+  //   send byte by byte and check is_uart_idle every time before sending next byte
+  // this will also let to move this into separate Loop
+  digitalWrite(rs_pinDir, HIGH);
+  timerMark = millis();
+}
+
+void RS485Client::rs485ClientLoop() {
+  switch(currentStateRS485) {
+    case RS485_IDLE:
+      if (Serial.available() > 0) {
+        while (Serial.available()) Serial.read(); // Clear buffer
+        timerMark = millis();
+      } else {
+        if (millis() - timerMark >= HEARTBEAT_INTERVAL) {
+          retryCount = 0;
+          rs485SendPacket();
+          currentStateRS485 = RS485_WAIT_ACK;
+        }
+      }
+      break;
+
+    case RS485_WAIT_ACK:
+      if (Serial.available() > 0) {
+        uint8_t response = Serial.read();
+        if (uint8_t(response) == 0x66) {
+          currentStateRS485 = RS485_IDLE;
+          timerMark = millis();
+        } else {
+          currentStateRS485 = RS485_RETRY_DELAY;
+          timerMark = millis();
+        }
+      } else if (millis() - timerMark >= ACK_TIMEOUT) {
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          rs485SendPacket();
+        } else {
+          currentStateRS485 = RS485_IDLE;
+          timerMark = millis();
+        }
+      }
+      break;
+
+    case RS485_RETRY_DELAY:
+      if (millis() - timerMark >= 10) {
+        rs485SendPacket();
+        currentStateRS485 = RS485_WAIT_ACK;
+      }
+      break;
+  }
+}

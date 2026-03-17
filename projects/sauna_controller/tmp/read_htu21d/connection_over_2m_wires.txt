@@ -1,0 +1,9 @@
+1) decrease speed from 100kHz to 10kHz
+2) replace pull-ups with 2.2k instead of 4.7k
+   add 4.3k or 3.0k in parallel to existing 4.7k
+3) use twisted pair
+    - SDA/GND first pair
+    - SCL/GND second pair
+    - VCC/GND third pair
+4) 0.1uF cap close to sensor
+5) implement retry mechanism when CRC fails

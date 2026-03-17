@@ -1,0 +1,5 @@
+To implement:
+
+RS485 better reliability:
+ - Add 560 Ohm resistor between A and Vcc
+ - Add 560 Ohm resistor between B and Gnd
