@@ -1,0 +1,1 @@
+- add 5k-10k pull-up from data to 5V
