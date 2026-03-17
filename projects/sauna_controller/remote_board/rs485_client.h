@@ -16,13 +16,17 @@ namespace RS485Client {
   const unsigned long ACK_TIMEOUT = 200;
   const int MAX_RETRIES = 3;
 
-  // RS485 State Machine Loop
-  enum StateRS485 { IDLE, SENDING, WAIT_ACK, RETRY_DELAY };
+  // State Machine Loop
+  enum State { IDLE, SENDING, WAIT_ACK, RETRY_DELAY };
 
   void loop();
 
   // static is essentially private
+  static void switchToReceive();
+  static void switchToTransmit();
   static void sendPacket();
+
+  static void flushSerialRead();
 }
 
 

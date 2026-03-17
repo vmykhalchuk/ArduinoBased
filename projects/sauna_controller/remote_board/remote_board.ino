@@ -2,13 +2,9 @@
 #include "rs485_client.h"
 #include "tm1637.h"
 
-int pin_RS485_dir = 2; // when LOW - Transmitting, HIGH - Receiving
+int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 int pin_TM1637_CLK = 3;
 int pin_TM1637_DIO = 4;
-
-// 3 data bytes + crc
-uint8_t rx485_in_buf[1];
-uint8_t rx485_out_buf[3];
 
 bool powerOnRequest = false;
 bool fanOnRequest = false;
@@ -19,8 +15,8 @@ int digitsDisplayValue = 0;
 bool digitsDisplayShowDoubleDots = false;
 
 void setup() {
-  RS485Client::init(pin_RS485_dir);
   Serial.begin(38400);
+  RS485Client::init(pin_RS485_dir);
   TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
   TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
 }
