@@ -39,15 +39,16 @@ static void RS485Client::sendPacket() {
   uint8_t payload[2] = {b1, b2};
   uint8_t crc = calculateCRC8(payload, 2);
 
-  digitalWrite(rs_pinDir, LOW);
-  Serial.write(b1);
-  Serial.write(b2);
-  Serial.write(crc);
-  Serial.flush();
   // Performance improvement:
   //   Use my_serial
   //   send byte by byte and check is_uart_idle every time before sending next byte
   // this will also let to move this into separate Loop
+
+  digitalWrite(rs_pinDir, LOW);
+  Serial.write(b1);
+  Serial.write(b2);
+  Serial.write(crc);
+  Serial.flush(); // wait till physical transfer completes
   digitalWrite(rs_pinDir, HIGH);
   timerMark = millis();
 }

@@ -1,7 +1,10 @@
 #include <Arduino.h>
 #include "rs485_client.h"
+#include "tm1637.h"
 
 int pin_RS485_dir = 2; // when LOW - Transmitting, HIGH - Receiving
+int pin_TM1637_CLK = 3;
+int pin_TM1637_DIO = 4;
 
 // 3 data bytes + crc
 uint8_t rx485_in_buf[1];
@@ -12,9 +15,14 @@ bool fanOnRequest = false;
 bool heatRequest = false;
 bool fireAlarm = false; // in case fire is registered!
 
+int digitsDisplayValue = 0;
+bool digitsDisplayShowDoubleDots = false;
+
 void setup() {
   RS485Client::init(pin_RS485_dir);
   Serial.begin(38400);
+  TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
+  TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
 }
 
 int i = -1;
@@ -43,7 +51,14 @@ void loop_buttons() {
   
 }
 
+int digitsDisplayValue_displayed = digitsDisplayValue;
+bool digitsDisplayShowDoubleDots_displayed = digitsDisplayShowDoubleDots;
 void loop_digitsDisplay() {
+  if (digitsDisplayValue != digitsDisplayValue_displayed || digitsDisplayShowDoubleDots != digitsDisplayShowDoubleDots_displayed) {
+    TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
+    digitsDisplayValue_displayed = digitsDisplayValue;
+    digitsDisplayShowDoubleDots_displayed = digitsDisplayShowDoubleDots;
+  }
 }
 
 void loop_leds() {
