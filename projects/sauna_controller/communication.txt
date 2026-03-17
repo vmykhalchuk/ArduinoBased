@@ -1,8 +1,8 @@
 Communication between two boards is done in following format:
 
+- Speed: 38400
 - Main board starts from listening
 - Remote board once every 3 sec sends status to Main board
-    - when some data is intercepted during wait period -> restart timer
   - status consists of two bytes ending with CRC-8 byte
     - information to send consists of 4 flags, that are encoded into three bytes
       - f1 - power on request
@@ -11,6 +11,8 @@ Communication between two boards is done in following format:
       - f4 - fire alarm!
     - B1=[f1,f2,f3,f4,!f1,!f2,!f3,!f4]
     - B2=[!f1,!f2,!f3,!f4,f1,f2,f3,f4]
+  - edge cases
+    - when some data is intercepted during wait period -> restart timer
 - Main board as soon as receives data, waits for 10ms and replies with:
   - ACK 0x66 - if CRC and data matches template
   - CRC_ERR 0x96 - if CRC matches

@@ -13,15 +13,25 @@ bool heatRequest = false;
 bool fireAlarm = false; // in case fire is registered!
 
 void setup() {
-  RS485Client::initRS485Client(pin_RS485_dir);
-  Serial.begin(9600);
+  RS485Client::init(pin_RS485_dir);
+  Serial.begin(38400);
 }
 
-int i = 0;
+int i = -1;
+unsigned long timerMark = millis();
+
 void loop() {
-  i++;
-  if (i%2 == 0) RS485Client::rs485ClientUpdateFlags(true,false,true,false); else RS485Client::rs485ClientUpdateFlags(false,true,false, true);
-  RS485Client::rs485ClientLoop();
+  if (millis() - timerMark > 10000) {
+    timerMark = millis();
+    i++;
+    powerOnRequest = false; fanOnRequest = false; heatRequest = false; fireAlarm = false;
+    if (i % 4 == 0) powerOnRequest = true;
+    else if (i % 4 == 1) fanOnRequest = true;
+    else if (i % 4 == 2) heatRequest = true;
+    else if (i % 4 == 3) fireAlarm = true;
+    RS485Client::updateFlags(powerOnRequest, fanOnRequest, heatRequest, fireAlarm);
+  }
+  RS485Client::loop();
 }
 
 uint8_t state_tempSensors = 0;
