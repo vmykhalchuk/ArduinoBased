@@ -55,9 +55,12 @@ void setup() {
   initSwitch(sw_Panel_Buzzer);
   
   pinMode(pin_TestBtn, INPUT);
+  digitalWrite(pin_TestBtn, HIGH);
+  delay(20);
   if (digitalRead(pin_TestBtn) == LOW) {
-    runTests();
+    while (true) { delay(3000); runTests(); }
   }
+  digitalWrite(pin_TestBtn, LOW);
   pinMode(pin_TestBtn, OUTPUT);
 }
 
