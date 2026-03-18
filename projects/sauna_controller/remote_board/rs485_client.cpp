@@ -4,23 +4,33 @@
 
 namespace RS485Client {
 
-  int errorCode = 0;
+  Error errorCode = OK;
 
-  static State currentState = IDLE;
+  Error popError() {
+    Error e = errorCode;
+    errorCode = OK;
+    return e;
+  }
   
+  Error peekError() {
+    return errorCode;
+  }
+
   static bool rs_pinDirIsSet = false;
   static int rs_pinDir = 0;
   
   static bool rs_f1=false, rs_f2=false, rs_f3=false, rs_f4=false;
   
+  static State currentState = 0;
   static unsigned long timerMark = 0;
-  static int retryCount = 0;
+  static uint8_t retryCount = 0;
 
   void init(int pinDir) {
     rs_pinDir = pinDir;
     rs_pinDirIsSet = true;
     switchToTransmit(); // to prevent Main board from receiving random noise
     pinMode(rs_pinDir, OUTPUT);
+    changeState(IDLE);
   }
   
   void updateFlags(bool f1, bool f2, bool f3, bool f4) {
@@ -36,11 +46,12 @@ namespace RS485Client {
   
   static void switchToTransmit() {
     digitalWrite(rs_pinDir, HIGH); // switch to Transmission mode
+    delay(3);
   }
   
   static void sendPacket() {
     if (!rs_pinDirIsSet) {
-      errorCode = 0x10;
+      errorCode = ERROR_INIT;
       return;
     }
   
@@ -70,19 +81,23 @@ namespace RS485Client {
       while (Serial.available()) Serial.read();
     }
   }
+
+  static void changeState(State newState) {
+    currentState = newState;
+    timerMark = millis();
+  }
   
   void loop() {
     switch(currentState) {
       case IDLE:
         if (Serial.available() > 0) {
           flushSerialRead();
-          timerMark = millis(); // restart delay because of some noise on line
+          changeState(currentState); // restart timer because of some noise on line
         } else {
           if (millis() - timerMark >= HEARTBEAT_INTERVAL) {
-            retryCount = 0;
             sendPacket();
-            timerMark = millis();
-            currentState = WAIT_ACK;
+            retryCount = 0;
+            changeState(WAIT_ACK);
           }
         }
         break;
@@ -91,27 +106,30 @@ namespace RS485Client {
         if (Serial.available() > 0) {
           uint8_t response = Serial.read();
           if (uint8_t(response) == 0x66) {
-            currentState = IDLE;
+            changeState(IDLE);
           } else {
-            currentState = RETRY_DELAY;
+            errorCode = NON_ACK_RECEIVED;
+            changeState(RETRY_DELAY);
           }
         } else if (millis() - timerMark >= ACK_TIMEOUT) {
+          errorCode = ACK_WAIT_TIMEOUT;
           if (retryCount < MAX_RETRIES) {
             retryCount++;
             sendPacket();
+            changeState(WAIT_ACK);
           } else {
-            currentState = IDLE;
+            changeState(IDLE);
           }
+        } else {
+          // wait for timeout
         }
-        timerMark = millis();
         break;
   
       case RETRY_DELAY:
         flushSerialRead();
         if (millis() - timerMark >= 50) {
           sendPacket();
-          timerMark = millis();
-          currentState = WAIT_ACK;
+          changeState(WAIT_ACK);
         }
         break;
     }

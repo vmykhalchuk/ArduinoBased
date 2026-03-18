@@ -5,7 +5,9 @@
 
 namespace RS485Client {
 
-  extern int errorCode;
+  enum Error { OK, ERROR_INIT, NON_ACK_RECEIVED, ACK_WAIT_TIMEOUT };
+  Error popError();
+  Error peekError();
 
   void init(int pinDir);
 
@@ -14,7 +16,7 @@ namespace RS485Client {
   // Configuration
   const unsigned long HEARTBEAT_INTERVAL = 3000;
   const unsigned long ACK_TIMEOUT = 200;
-  const int MAX_RETRIES = 3;
+  const uint8_t MAX_RETRIES = 3;
 
   // State Machine Loop
   enum State { IDLE, SENDING, WAIT_ACK, RETRY_DELAY };
@@ -27,6 +29,9 @@ namespace RS485Client {
   static void sendPacket();
 
   static void flushSerialRead();
+
+  // also resets timer
+  static void changeState(State newState);
 }
 
 

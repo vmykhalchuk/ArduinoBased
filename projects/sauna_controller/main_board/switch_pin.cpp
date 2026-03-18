@@ -1,6 +1,6 @@
 #include "switch_pin.h"
 
-void initSwitch(SwitchDef swDef, bool initInOnState = false) {
+void initSwitch(SwitchDef swDef, bool initInOnState) {
   if (initInOnState) {
     switchOn(swDef);
   } else {

@@ -43,7 +43,7 @@ void setup() {
   Tests::init(sw_Panel_Led1, sw_Panel_Buzzer);
   Serial.begin(38400);
   initSwitch(sw_fan_TRIACs);
-  initSwitch(sw_fan_Main);
+  initSwitch(sw_fan_Main, true);
   initSwitch(sw_Heater);
 
   initSwitch(sw_Relay1_POWER);
@@ -127,7 +127,8 @@ void powerSystemOff() {
 
 void loop() {
   RS485Server::loop();
-  if (RS485Server::errorCode != RS485Server::OK) {
+  RS485Server::Error rs485Error = RS485Server::popError();
+  if (rs485Error != RS485Server::OK) {
     // Handle error!
     digitalWrite(LED_BUILTIN, HIGH);
   }  

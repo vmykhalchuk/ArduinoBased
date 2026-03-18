@@ -4,6 +4,16 @@
 namespace RS485Server {
   
   Error errorCode = OK;
+
+  Error popError() {
+    Error e = errorCode;
+    errorCode = OK;
+    return e;
+  }
+  
+  Error peekError() {
+    return errorCode;
+  }
   
   bool dataReceived = false;
   bool f1 = false, f2 = false;
@@ -67,6 +77,7 @@ namespace RS485Server {
 
       switchToTransmit();
       Serial.write(responseByte);
+      Serial.flush();
       switchToReceive();
     }
 
@@ -84,6 +95,7 @@ namespace RS485Server {
   
   static void switchToTransmit() {
     digitalWrite(rs_pinDir, HIGH); // switch to Transmission mode
+    delay(3);
   }
   
   static bool isDataPacketValid(uint8_t b1, uint8_t b2) {

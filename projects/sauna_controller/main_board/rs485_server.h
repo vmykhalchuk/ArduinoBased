@@ -6,7 +6,8 @@
 namespace RS485Server {
 
   enum Error { OK, NOT_ENOUGH_BYTES_RECEIVED, BAD_CRC, BAD_DATA };
-  extern Error errorCode;
+  Error popError();
+  Error peekError();
   
   extern bool dataReceived; //   represents fact that new transmission received)
                             // in other words - it signals caller code that new data
