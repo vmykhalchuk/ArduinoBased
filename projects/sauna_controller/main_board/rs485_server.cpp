@@ -5,7 +5,7 @@ namespace RS485Server {
   
   Error errorCode = OK;
   
-  bool flagsUpdated = false;
+  bool dataReceived = false;
   bool f1 = false, f2 = false;
   bool f3 = false, f4 = false;
 
@@ -52,7 +52,7 @@ namespace RS485Server {
         f3 = !(b1 & 0B01);
         f2 = !(b1 & 0B001);
         f1 = !(b1 & 0B0001);
-        flagsUpdated = true;
+        dataReceived = true;
         
       } else {
         

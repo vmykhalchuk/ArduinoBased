@@ -34,6 +34,10 @@ bool fanOnRequest = false;
 bool heatRequest = false;
 bool fireAlarm = false; // in case fire is registered!
 
+bool isSystemPowerOn = false;
+unsigned long systemPowerOnTimerMark = 0;
+unsigned long dataReceivedTimerMark = 0;
+
 void setup() {
   RS485Server::init(pin_RS485_dir);
   Tests::init(sw_Panel_Led1, sw_Panel_Buzzer);
@@ -97,7 +101,6 @@ void runTests() {
   }
 }
 
-
 void powerSystemOn() {
   if (fireAlarm) return; // for safety reasons we do not let system on!
 
@@ -107,6 +110,9 @@ void powerSystemOn() {
   delay(3000);
   switchOff(sw_Relay2_ALARM);
   switchOn(sw_Relay1_POWER);
+
+  isSystemPowerOn = true;
+  systemPowerOnTimerMark = millis();
 }
 
 void powerSystemOff() {
@@ -115,6 +121,8 @@ void powerSystemOff() {
   //switchOff(sw_Relay2_ALARM); DO NOT SWITCH IT OFF IF ALREADY ON!!!
   switchOff(sw_Relay3_HEAT_FAN);
   switchOff(sw_Relay4);
+
+  isSystemPowerOn = false;
 }
 
 void loop() {
@@ -122,31 +130,39 @@ void loop() {
   if (RS485Server::errorCode != RS485Server::OK) {
     // Handle error!
     digitalWrite(LED_BUILTIN, HIGH);
-  }
-  
-  bool powerOnRequestChanged = false;
-  bool fanOnRequestChanged = false;
-  bool heatRequestChanged = false;
-  
-  if (RS485Server::flagsUpdated) {
-    if (RS485Server::f4) fireAlarm = true; // will not reset unless full system reset!
-    
-    powerOnRequestChanged = powerOnRequest != RS485Server::f1;
-    fanOnRequestChanged = fanOnRequest != RS485Server::f2;
-    heatRequestChanged = heatRequest != RS485Server::f3;
-
-    powerOnRequest = RS485Server::f1;
-    fanOnRequest = RS485Server::f2;
-    heatRequest = RS485Server::f3;
+  }  
+  if (RS485Server::dataReceived) {
+    handleRS485DataReceived();
+    RS485Server::dataReceived = false;
   }
 
+  if (isSystemPowerOn && millis() - dataReceivedTimerMark > 10000) {
+    // remote board is unavailable while System Power is ON - we must turn it OFF for safety!!!
+    powerSystemOff();
+    // FIXME Sound error with buzzer, no need to start Alarm
+    // We can display set of errors by using approach:
+    //   three beeps/blinks as a start
+    //     for every bit if it is set - two blinks; otherwise on
+    //     delay between blinks to make it easier to read
+    //   long delay before repeating
+    //
+    //  when new error occurs - make 6 beeps and wait for five seconds before displaying error
+  }
+}
+
+void handleRS485DataReceived() {
+  dataReceivedTimerMark = millis();
+  
+  if (RS485Server::f4) fireAlarm = true; // will not reset unless full system reset!
+  
   if (fireAlarm) {
     powerSystemOff();
     switchOn(sw_Relay2_ALARM); // switch Alarm!!!
     return; // no more actions allowed!!!
   }
 
-  if (powerOnRequestChanged) {
+  if (powerOnRequest != RS485Server::f1) {
+    powerOnRequest = RS485Server::f1;
     if (powerOnRequest) {
       powerSystemOn();
     } else {
@@ -154,7 +170,8 @@ void loop() {
     }
   }
 
-  if (fanOnRequestChanged) {
+  if (fanOnRequest != RS485Server::f2) {
+    fanOnRequest = RS485Server::f2;
     if (fanOnRequest) {
       switchOn(sw_Relay3_HEAT_FAN);
     } else {
@@ -162,7 +179,8 @@ void loop() {
     }
   }
 
-  if (heatRequestChanged) {
+  if (heatRequest != RS485Server::f3) {
+    heatRequest = RS485Server::f3;
     if (heatRequest) {
       switchOn(sw_Heater);
     } else {
