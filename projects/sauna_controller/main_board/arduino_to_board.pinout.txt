@@ -2,11 +2,11 @@
 3 - reserved
 4,5,6,7,8 - DS18B20 sensors
 9 - reserved
-10 - TRIACs Fans
+10 - TRIACs Fans (LOW is active)
 11 - Main Fan
 12 - TRIACs
 13 - Led + Test Btn (LOW is active)
-A0-A3 - relays
+A0-A3 - relays (LOW is active)
 A4 - Panel Led 3 (optional)
 A5 - Panel Led 2 (optional)
 A6 - Panel Led 1 / RGB Leds
