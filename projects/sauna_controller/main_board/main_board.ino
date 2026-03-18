@@ -55,13 +55,14 @@ void setup() {
   initSwitch(sw_Panel_Buzzer);
   
   pinMode(pin_TestBtn, INPUT);
-  digitalWrite(pin_TestBtn, HIGH);
   delay(20);
-  if (digitalRead(pin_TestBtn) == LOW) {
+  if (digitalRead(pin_TestBtn) == HIGH) {
     while (true) { delay(3000); runTests(); }
   }
   digitalWrite(pin_TestBtn, LOW);
   pinMode(pin_TestBtn, OUTPUT);
+  delay(2000);
+  switchOff(sw_fan_Main);
 }
 
 void runTests() {
