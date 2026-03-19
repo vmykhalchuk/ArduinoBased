@@ -20,7 +20,7 @@ namespace RS485Server {
   const unsigned long WAIT_BEFORE_REPLY = 100; //orig: 5
   const unsigned long TRANSMISSION_MAX_TIME_MS = 100; //orig: 100 // FIXME reduce to 50
   
-  bool dataReceived = false;
+  bool dataRefreshedFlag = false;
   bool f1 = false, f2 = false;
   bool f3 = false, f4 = false;
 
@@ -29,6 +29,15 @@ namespace RS485Server {
 
   static bool serial_dataReceivingStarted = false;
   static unsigned long timerMark = 0;
+
+  bool peekDataRefreshedFlag() {
+    return dataRefreshedFlag;
+  }
+  bool popDataRefreshedFlag() {
+    bool res = dataRefreshedFlag;
+    dataRefreshedFlag = false;
+    return res;
+  }
     
   void init(int pinDir) {
     rs_pinDir = pinDir;
@@ -66,7 +75,7 @@ namespace RS485Server {
         f3 = !(b1 & 0B01);
         f2 = !(b1 & 0B001);
         f1 = !(b1 & 0B0001);
-        dataReceived = true;
+        dataRefreshedFlag = true;
         
       } else {
         

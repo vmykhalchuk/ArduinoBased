@@ -9,10 +9,13 @@ namespace RS485Server {
   Error popError();
   Error peekError();
   
-  extern bool dataReceived; //   represents fact that new transmission received)
-                            // in other words - it signals caller code that new data
-                            // is available to read from f1 - f4
-                            // (doesn't necessarily mean the flags have changed)
+  // dataRefreshedFlag
+  //represents fact that new transmission received)
+  // in other words - it signals caller code that new data
+  // is available to read from f1 - f4
+  // (doesn't necessarily mean the f1-f4 flags have changed)
+  bool peekDataRefreshedFlag();
+  bool popDataRefreshedFlag();
   extern bool f1, f2, f3, f4;
 
   void init(int pinDir);

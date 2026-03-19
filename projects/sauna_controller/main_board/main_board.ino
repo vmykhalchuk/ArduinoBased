@@ -36,7 +36,7 @@ bool fanOnRequest = false;
 bool heatRequest = false;
 bool fireAlarm = false; // in case fire is registered!
 
-bool isSystemPowerOn = false;
+bool isSystemPoweredOn = false;
 unsigned long systemPowerOnTimerMark = 0;
 unsigned long dataReceivedTimerMark = 0;
 
@@ -136,7 +136,7 @@ void runTests() {
 }
 
 void powerSystemOn() {
-  if (isSystemPowerOn) return;
+  if (isSystemPoweredOn) return;
   if (fireAlarm) return; // for safety reasons we do not let system on!
 
   // toggle Alarm for 3 sec to test it works!
@@ -146,7 +146,7 @@ void powerSystemOn() {
   switchOff(sw_Relay1_ALARM);
   switchOn(sw_Relay3_POWER);
 
-  isSystemPowerOn = true;
+  isSystemPoweredOn = true;
   systemPowerOnTimerMark = millis();
 }
 
@@ -157,7 +157,7 @@ void powerSystemOff() {
   switchOff(sw_Relay2_HEAT_FAN);
   switchOff(sw_Relay4);
 
-  isSystemPowerOn = false;
+  isSystemPoweredOn = false;
 }
 
 void stopBecauseOfCriticalError(int blinkError) {
@@ -182,14 +182,13 @@ void loop() {
       blink(sw_InfoPanel_Buzzer, 3, 100); delay(2000);
     }
   }
-  if (RS485Server::dataReceived) {
+  if (RS485Server::popDataRefreshedFlag()) {
     InfoPanel::clearCommunicationError();
-    handleRS485DataReceived();
-    RS485Server::dataReceived = false;
+    handleRS485DataRefreshed();
   }
 
   if ((millis() - dataReceivedTimerMark) > 10000) {
-    if (isSystemPowerOn) {
+    if (isSystemPoweredOn) {
       // remote board is unavailable while System Power is ON - we must turn it OFF for safety!!!
       powerSystemOff();
     }
@@ -200,7 +199,7 @@ void loop() {
   InfoPanel::loop();
 }
 
-void handleRS485DataReceived() {
+void handleRS485DataRefreshed() {
   dataReceivedTimerMark = millis();
   
   if (RS485Server::f4) fireAlarm = true; // will not reset unless full system reset!
