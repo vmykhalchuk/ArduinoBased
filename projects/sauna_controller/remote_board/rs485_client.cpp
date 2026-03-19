@@ -21,7 +21,7 @@ namespace RS485Client {
   
   static bool rs_f1=false, rs_f2=false, rs_f3=false, rs_f4=false;
   
-  static State currentState = 0;
+  static State currentState = IDLE;
   static unsigned long timerMark = 0;
   static uint8_t retryCount = 0;
 
