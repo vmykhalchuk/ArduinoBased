@@ -24,7 +24,7 @@ namespace RS485Client {
   static void switchToTransmit();
   static void sendPacket();
 
-  static void flushSerialRead();
+  static bool flushSerialRead();
 
   // also resets timer
   static void changeState(State newState);

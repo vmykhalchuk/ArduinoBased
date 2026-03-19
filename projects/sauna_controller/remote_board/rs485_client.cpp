@@ -51,7 +51,7 @@ namespace RS485Client {
   }
   
   static void switchToReceive() {
-    delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes
+    delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes after previous transmission
     digitalWrite(rs_pinDir, LOW); // switch to Receiving mode
   }
   
@@ -86,10 +86,10 @@ namespace RS485Client {
     switchToReceive();
   }
 
-  static void flushSerialRead() {
-    if (Serial.available()) {
-      while (Serial.available()) Serial.read();
-    }
+  static bool flushSerialRead() {
+    bool res = Serial.available();
+    while (Serial.available()) Serial.read();
+    return res;
   }
 
   static void changeState(State newState) {
