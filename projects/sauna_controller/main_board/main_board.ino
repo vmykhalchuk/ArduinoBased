@@ -174,9 +174,9 @@ void loop() {
   if (rs485Error != RS485Server::OK) {
     InfoPanel::setCommunicationError();
     if (rs485Error == RS485Server::NOT_ENOUGH_BYTES_RECEIVED) {
-      blink(sw_InfoPanel_Buzzer, 1, 50);
+      blink(sw_InfoPanel_Buzzer, 1, 100); delay(3000);
     } else {
-      blink(sw_InfoPanel_Buzzer, 2, 50);
+      blink(sw_InfoPanel_Buzzer, 2, 100); delay(3000);
     }
   }
   if (RS485Server::dataReceived) {
@@ -185,13 +185,14 @@ void loop() {
     RS485Server::dataReceived = false;
   }
 
-  if (millis() - dataReceivedTimerMark > 10000) {
+  if ((millis() - dataReceivedTimerMark) > 10000) {
     if (isSystemPowerOn) {
       // remote board is unavailable while System Power is ON - we must turn it OFF for safety!!!
       powerSystemOff();
     }
     InfoPanel::setCommunicationError();
-    blink(sw_InfoPanel_Buzzer, 3, 50);
+    blink(sw_InfoPanel_Buzzer, 3, 50); delay(3000);
+    dataReceivedTimerMark = millis();
   }
   InfoPanel::loop();
 }
