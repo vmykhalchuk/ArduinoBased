@@ -23,3 +23,13 @@ void switchOnOrOff(SwitchDef swDef, bool on) {
   if (on) switchOn(swDef);
   else switchOff(swDef);
 }
+
+void blink(SwitchDef swDef, uint8_t times, unsigned int pulseMs, unsigned int delayMs) {
+  if (delayMs == 0) delayMs = pulseMs;
+  for (uint8_t i = 0; i < times; i++) {
+    switchOn(swDef);
+    delay(pulseMs);
+    switchOff(swDef);
+    delay(delayMs);
+  }
+}

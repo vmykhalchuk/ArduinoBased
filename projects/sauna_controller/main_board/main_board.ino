@@ -1,34 +1,36 @@
 #include <Arduino.h>
 #include "switch_pin.h"
 #include "rs485_server.h"
-#include "tests.h"
+#include "info_panel.h"
+#include "ds18b20.h"
 
-int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
+const int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 
 // 4 - External
 // 5 - Internal (inside enclosure)
 // 6-8 - TRIACs
-int pins_DS18B20[] = { 4, 5, 6, 7, 8};
+const int TEMP_SENS_COUNT = 5;
+const int pins_DS18B20[TEMP_SENS_COUNT] = { 4, 5, 6, 7, 8};
 
-SwitchDef sw_fan_TRIACs = {10, IS_ACTIVE_LOW};
-SwitchDef sw_fan_Main = {11, IS_ACTIVE_HIGH};
-SwitchDef sw_Heater = {12, IS_ACTIVE_HIGH}; // activates all three TRIACs
+const SwitchDef sw_fan_TRIACs = {10, IS_ACTIVE_LOW};
+const SwitchDef sw_fan_Main = {11, IS_ACTIVE_HIGH};
+const SwitchDef sw_Heater_TRIACs = {12, IS_ACTIVE_HIGH}; // activates all three TRIACs of Heater
 
-int pin_TestBtn = 13; // LOW - Pressed
+const int pin_TestBtn = 13; // LOW - Pressed
 
 // Main power stage (Contactor)
-SwitchDef sw_Relay1_ALARM = {A0, IS_ACTIVE_LOW};
+const SwitchDef sw_Relay1_ALARM = {A0, IS_ACTIVE_LOW};
 // Alarm (Relay1 must be off for this to work!)
-SwitchDef sw_Relay2_HEAT_FAN = {A1, IS_ACTIVE_LOW};
+const SwitchDef sw_Relay2_HEAT_FAN = {A1, IS_ACTIVE_LOW};
 // Fan output (AC 220V Heating fan)
-SwitchDef sw_Relay3_POWER = {A2, IS_ACTIVE_LOW};
+const SwitchDef sw_Relay3_POWER = {A2, IS_ACTIVE_LOW};
 // Reserved for future use
-SwitchDef sw_Relay4 = {A3, IS_ACTIVE_LOW};
+const SwitchDef sw_Relay4 = {A3, IS_ACTIVE_LOW};
 
-SwitchDef sw_Panel_Led1 = {A6, IS_ACTIVE_HIGH};
-SwitchDef sw_Panel_Buzzer = {A7, IS_ACTIVE_HIGH};
+const SwitchDef sw_InfoPanel_Led1 = {A6, IS_ACTIVE_HIGH};
+const SwitchDef sw_InfoPanel_Buzzer = {A7, IS_ACTIVE_HIGH};
 
-// Remote flags
+// Remote flags (data received from Remote)
 bool powerOnRequest = false;
 bool fanOnRequest = false;
 bool heatRequest = false;
@@ -38,38 +40,65 @@ bool isSystemPowerOn = false;
 unsigned long systemPowerOnTimerMark = 0;
 unsigned long dataReceivedTimerMark = 0;
 
+float temperatures[TEMP_SENS_COUNT];
+
 void setup() {
   RS485Server::init(pin_RS485_dir);
-  Tests::init(sw_Panel_Led1, sw_Panel_Buzzer);
+  InfoPanel::init(sw_InfoPanel_Led1, sw_InfoPanel_Buzzer);
   Serial.begin(38400);
   initSwitch(sw_fan_TRIACs);
   initSwitch(sw_fan_Main, true);
-  initSwitch(sw_Heater);
+  initSwitch(sw_Heater_TRIACs);
 
   initSwitch(sw_Relay1_ALARM);
   initSwitch(sw_Relay2_HEAT_FAN);
   initSwitch(sw_Relay3_POWER);
   initSwitch(sw_Relay4);
 
-  initSwitch(sw_Panel_Led1);
-  initSwitch(sw_Panel_Buzzer);
+  initSwitch(sw_InfoPanel_Led1);
+  initSwitch(sw_InfoPanel_Buzzer, true);
   
   pinMode(pin_TestBtn, INPUT);
   delay(20);
+  bool runTestsSelected = false;
   if (digitalRead(pin_TestBtn) == HIGH) {
-    while (true) { delay(3000); runTests(); }
+    runTestsSelected = true;
   }
   digitalWrite(pin_TestBtn, LOW);
   pinMode(pin_TestBtn, OUTPUT);
   delay(2000);
   switchOff(sw_fan_Main);
+  switchOff(sw_InfoPanel_Buzzer);
+  dataReceivedTimerMark = millis();
+
+  if (runTestsSelected) {
+    while (true) {
+       delay(2000);
+       runTests(); 
+    }
+  }
+
+  /*
+  // init temp sensors
+  bool allSensorsPresent = true;
+  for (int i = 0; i < TEMP_SENS_COUNT; i++) {
+    allSensorsPresent &= DS18B20::setResolution(pins_DS18B20[i], 0x3F);
+    temperatures[i] = DS18B20::readTemperature(pins_DS18B20[i]);
+  }
+
+  if (!allSensorsPresent) {
+    // critical error, we cannot continue operation
+    stopBecauseOfCriticalError(3);
+  }
+  */
 }
 
 void runTests() {
   for (uint8_t i = 1; i <= 5; i++) {
-    Tests::blinkTestNo(i);
+    blink(sw_InfoPanel_Buzzer, i);
+    // FIXME Make it more solid test - to check all systems working
     switch (i) {
-      case 1: 
+      case 1:
         delay(1000);
         switchOn(sw_fan_Main);
         delay(3000);
@@ -83,9 +112,9 @@ void runTests() {
         break;
       case 3:
         delay(1000);
-        switchOn(sw_Heater);
+        switchOn(sw_Heater_TRIACs);
         delay(3000);
-        switchOff(sw_Heater);
+        switchOff(sw_Heater_TRIACs);
         break;
       case 4:
         delay(1000);
@@ -106,6 +135,7 @@ void runTests() {
 }
 
 void powerSystemOn() {
+  if (isSystemPowerOn) return;
   if (fireAlarm) return; // for safety reasons we do not let system on!
 
   // toggle Alarm for 3 sec to test it works!
@@ -120,7 +150,7 @@ void powerSystemOn() {
 }
 
 void powerSystemOff() {
-  switchOff(sw_Heater);
+  switchOff(sw_Heater_TRIACs);
   switchOff(sw_Relay3_POWER);
   //switchOff(sw_Relay2_ALARM); DO NOT SWITCH IT OFF IF ALREADY ON!!!
   switchOff(sw_Relay2_HEAT_FAN);
@@ -129,30 +159,35 @@ void powerSystemOff() {
   isSystemPowerOn = false;
 }
 
+void stopBecauseOfCriticalError(int blinkError) {
+  powerSystemOff();
+  digitalWrite(LED_BUILTIN, HIGH);
+  while (true) {
+    delay(3000);
+    blink(sw_InfoPanel_Buzzer, blinkError, 600);
+  }
+}
+
 void loop() {
   RS485Server::loop();
   RS485Server::Error rs485Error = RS485Server::popError();
   if (rs485Error != RS485Server::OK) {
-    // Handle error!
-    digitalWrite(LED_BUILTIN, HIGH);
-  }  
+    InfoPanel::setCommunicationError();
+  }
   if (RS485Server::dataReceived) {
+    InfoPanel::clearCommunicationError();
     handleRS485DataReceived();
     RS485Server::dataReceived = false;
   }
 
-  if (isSystemPowerOn && millis() - dataReceivedTimerMark > 10000) {
-    // remote board is unavailable while System Power is ON - we must turn it OFF for safety!!!
-    powerSystemOff();
-    // FIXME Sound error with buzzer, no need to start Alarm
-    // We can display set of errors by using approach:
-    //   three beeps/blinks as a start
-    //     for every bit if it is set - two blinks; otherwise on
-    //     delay between blinks to make it easier to read
-    //   long delay before repeating
-    //
-    //  when new error occurs - make 6 beeps and wait for five seconds before displaying error
+  if (millis() - dataReceivedTimerMark > 10000) {
+    if (isSystemPowerOn) {
+      // remote board is unavailable while System Power is ON - we must turn it OFF for safety!!!
+      powerSystemOff();
+    }
+    InfoPanel::setCommunicationError();
   }
+  InfoPanel::loop();
 }
 
 void handleRS485DataReceived() {
@@ -187,9 +222,9 @@ void handleRS485DataReceived() {
   if (heatRequest != RS485Server::f3) {
     heatRequest = RS485Server::f3;
     if (heatRequest) {
-      switchOn(sw_Heater);
+      switchOn(sw_Heater_TRIACs);
     } else {
-      switchOff(sw_Heater);
+      switchOff(sw_Heater_TRIACs);
     }
   }
 }

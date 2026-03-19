@@ -21,10 +21,14 @@ void setup() {
   TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
 }
 
+void loop() {
+  RS485Client::loop();
+  testLoop();
+}
+
 int i = -1;
 unsigned long timerMark = millis();
-
-void loop() {
+void testLoop() {
   if (millis() - timerMark > 10000) {
     timerMark = millis();
     i++;
@@ -35,7 +39,6 @@ void loop() {
     else if (i % 4 == 3) fireAlarm = true;
     RS485Client::updateFlags(powerOnRequest, fanOnRequest, heatRequest, fireAlarm);
   }
-  RS485Client::loop();
 }
 
 uint8_t state_tempSensors = 0;
@@ -44,7 +47,6 @@ void loop_tempSensors() {
 }
 
 void loop_buttons() {
-  
 }
 
 int digitsDisplayValue_displayed = digitsDisplayValue;
