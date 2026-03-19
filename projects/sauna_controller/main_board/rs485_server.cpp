@@ -30,6 +30,8 @@ namespace RS485Server {
     rs_pinDirIsSet = true;
     switchToReceive();
     pinMode(pinDir, OUTPUT);
+    delay(100);
+    flushSerialRead();
   }
 
   void loop() {
@@ -86,6 +88,12 @@ namespace RS485Server {
       errorCode = NOT_ENOUGH_BYTES_RECEIVED;
       while (Serial.available()) Serial.read();
       serial_dataReceivingStarted = false;
+    }
+  }
+
+  static void flushSerialRead() {
+    if (Serial.available()) {
+      while (Serial.available()) Serial.read();
     }
   }
 
