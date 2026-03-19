@@ -27,8 +27,8 @@ const SwitchDef sw_Relay3_POWER = {A2, IS_ACTIVE_LOW};
 // Reserved for future use
 const SwitchDef sw_Relay4 = {A3, IS_ACTIVE_LOW};
 
-const SwitchDef sw_InfoPanel_Led1 = {A6, IS_ACTIVE_HIGH};
-const SwitchDef sw_InfoPanel_Buzzer = {A7, IS_ACTIVE_HIGH};
+const SwitchDef sw_InfoPanel_Led1 = {A4, IS_ACTIVE_HIGH};
+const SwitchDef sw_InfoPanel_Buzzer = {A5, IS_ACTIVE_HIGH};
 
 // Remote flags (data received from Remote)
 bool powerOnRequest = false;
