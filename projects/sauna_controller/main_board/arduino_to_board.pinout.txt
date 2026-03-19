@@ -2,17 +2,17 @@
 3 - reserved
 4,5,6,7,8 - DS18B20 sensors
 9 - reserved
-10 - TRIACs Fans (LOW is active)
-11 - Main Fan
+10 - Fans TRIACs (LOW is active)
+11 - Fan Main
 12 - TRIACs
 13 - Led + Test Btn (LOW is active)
 A0-A3 - relays (LOW is active)
-A4 - Panel Led 3 (optional)
-A5 - Panel Led 2 (optional)
-A6 - Panel Led 1 / RGB Leds
-A7 - Panel Buzzer
+A4 - Info Panel Led 3 (optional)
+A5 - Info Panel Led 2 (optional)
+A6 - Info Panel Led 1 / RGB Leds
+A7 - Info Panel Buzzer
 
 --------------------
 3 - reserved for future Int+PWM
 9 - reserved for future PWM
-A4,A5 - reserved because: IIC (TWI)
+A4,A5 - reserved for IIC (TWI)

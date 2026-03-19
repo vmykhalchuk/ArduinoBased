@@ -1,3 +1,22 @@
+Info Panel
+
+- group 1
+ - led green - "AC" - always on, signaling system is powered
+   - connected to +5V
+ - led yellow - "POWER" - power is ON (Heater is under voltage!)
+   - connected to Relay_3
+ - led red - "HEATER" - heater is ON (Heating at the moment)
+   - connected to TRIACs line
+
+- group 2
+ - led yellow - "FAN" - when Fan is ON
+   - connected to Relay_2
+ - led yellow - "No Remote" - lights on when remote is absent
+   - connected ??? perhaps A6
+ 
+
+
+
 To implement:
 
 RS485 better reliability:
