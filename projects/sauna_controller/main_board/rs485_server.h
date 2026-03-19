@@ -20,7 +20,7 @@ namespace RS485Server {
 
   // Static is essentially private
 
-  static void flushSerialRead();
+  static bool flushSerialRead();
   
   static void switchToReceive();
   static void switchToTransmit();

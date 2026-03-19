@@ -46,7 +46,7 @@ namespace RS485Server {
       uint8_t b2 = Serial.read();
       uint8_t receivedCRC = Serial.read();
       
-      while (Serial.available()) Serial.read(); // flush remaining bytes if present
+      flushSerialRead(); // flush remaining bytes if present
       serial_dataReceivingStarted = false;
   
       delay(5); // Required 5ms wait before reply
@@ -86,15 +86,15 @@ namespace RS485Server {
     if (serial_dataReceivingStarted && (millis() - timerMark >= 100)) {
       // error situation, ignore received data
       errorCode = NOT_ENOUGH_BYTES_RECEIVED;
-      while (Serial.available()) Serial.read();
+      flushSerialRead();
       serial_dataReceivingStarted = false;
     }
   }
 
-  static void flushSerialRead() {
-    if (Serial.available()) {
-      while (Serial.available()) Serial.read();
-    }
+  static bool flushSerialRead() {
+    bool r = Serial.available();
+    while (Serial.available()) Serial.read();
+    return r;
   }
 
   static void switchToReceive() {
@@ -108,9 +108,9 @@ namespace RS485Server {
   
   static bool isDataPacketValid(uint8_t b1, uint8_t b2) {
     uint8_t b1H = b1 >> 4;
-    uint8_t b1L = b1 & 0x0f;
+    uint8_t b1LInv = ~b1 & 0x0f;
     uint8_t b1Inv = ~b1;
-    return (b1H == b1L) && (b1Inv == b2);
+    return (b1H == b1LInv) && (b1Inv == b2);
   }
 
 }
