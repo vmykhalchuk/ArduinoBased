@@ -29,7 +29,7 @@ void loop() {
 int i = -1;
 unsigned long timerMark = millis();
 void testLoop() {
-  if (millis() - timerMark > 10000) {
+  if (millis() - timerMark > 20000) {
     timerMark = millis();
     i++;
     powerOnRequest = false; fanOnRequest = false; heatRequest = false; fireAlarm = false;

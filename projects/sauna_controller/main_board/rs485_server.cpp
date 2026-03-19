@@ -14,6 +14,11 @@ namespace RS485Server {
   Error peekError() {
     return errorCode;
   }
+
+  const unsigned long SWITCH_RX_TO_TX_HOLD = 30; //orig: 3
+  const unsigned long SWITCH_TX_TO_RX_WAIT = 20; //orig: 3
+  const unsigned long WAIT_BEFORE_REPLY = 100; //orig: 5
+  const unsigned long TRANSMISSION_MAX_TIME_MS = 100; //orig: 100 // FIXME reduce to 50
   
   bool dataReceived = false;
   bool f1 = false, f2 = false;
@@ -30,8 +35,7 @@ namespace RS485Server {
     rs_pinDirIsSet = true;
     switchToReceive();
     pinMode(pinDir, OUTPUT);
-    delay(100);
-    flushSerialRead();
+    delay(100); flushSerialRead();
   }
 
   void loop() {
@@ -48,9 +52,7 @@ namespace RS485Server {
       
       flushSerialRead(); // flush remaining bytes if present
       serial_dataReceivingStarted = false;
-  
-      delay(5); // Required 5ms wait before reply
-  
+    
       uint8_t payload[2] = {b1, b2};
       uint8_t calcCRC = calculateCRC8(payload, 2);
 
@@ -77,13 +79,14 @@ namespace RS485Server {
         }
       }
 
+      delay(WAIT_BEFORE_REPLY); // Required 5ms wait before reply
       switchToTransmit();
       Serial.write(responseByte);
       Serial.flush();
       switchToReceive();
     }
 
-    if (serial_dataReceivingStarted && (millis() - timerMark >= 100)) {
+    if (serial_dataReceivingStarted && (millis() - timerMark >= TRANSMISSION_MAX_TIME_MS)) {
       // error situation, ignore received data
       errorCode = NOT_ENOUGH_BYTES_RECEIVED;
       flushSerialRead();
@@ -98,12 +101,13 @@ namespace RS485Server {
   }
 
   static void switchToReceive() {
+    delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes
     digitalWrite(rs_pinDir, LOW); // switch to Receiving mode
   }
   
   static void switchToTransmit() {
     digitalWrite(rs_pinDir, HIGH); // switch to Transmission mode
-    delay(3);
+    delay(SWITCH_RX_TO_TX_HOLD); // let MAX IC to stabilize output
   }
   
   static bool isDataPacketValid(uint8_t b1, uint8_t b2) {

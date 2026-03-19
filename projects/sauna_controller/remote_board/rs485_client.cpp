@@ -16,6 +16,15 @@ namespace RS485Client {
     return errorCode;
   }
 
+  // Configuration
+  const unsigned long HEARTBEAT_INTERVAL = 6000; // orig: 3000
+  const unsigned long ACK_TIMEOUT = 800; //orig: 200
+  const unsigned long SWITCH_RX_TO_TX_HOLD = 30; //orig: 3
+  const unsigned long SWITCH_TX_TO_RX_WAIT = 20; //orig: 3
+  const unsigned long RETRY_DELAY_INTERVAL = 200; // orig: 50
+  const uint8_t MAX_RETRIES = 3;
+
+  // Variables
   static bool rs_pinDirIsSet = false;
   static int rs_pinDir = 0;
   
@@ -30,6 +39,7 @@ namespace RS485Client {
     rs_pinDirIsSet = true;
     switchToTransmit(); // to prevent Main board from receiving random noise
     pinMode(rs_pinDir, OUTPUT);
+    delay(100); flushSerialRead();
     changeState(IDLE);
   }
   
@@ -41,12 +51,13 @@ namespace RS485Client {
   }
   
   static void switchToReceive() {
+    delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes
     digitalWrite(rs_pinDir, LOW); // switch to Receiving mode
   }
   
   static void switchToTransmit() {
     digitalWrite(rs_pinDir, HIGH); // switch to Transmission mode
-    delay(3);
+    delay(SWITCH_RX_TO_TX_HOLD); // let MAX IC to stabilize output
   }
   
   static void sendPacket() {
@@ -55,7 +66,7 @@ namespace RS485Client {
       return;
     }
   
-    bool f1 = rs_f1, f2 = rs_f2, f3 = rs_f3, f4 = rs_f4;
+    uint8_t f1 = rs_f1 ? 1 : 0, f2 = rs_f2 ? 1 : 0, f3 = rs_f3 ? 1 : 0, f4 = rs_f4 ? 1 : 0;
     
     uint8_t b1 = (f1 << 7) | (f2 << 6) | (f3 << 5) | (f4 << 4) | (!f1 << 3) | (!f2 << 2) | (!f3 << 1) | !f4;
     uint8_t b2 = (!f1 << 7) | (!f2 << 6) | (!f3 << 5) | (!f4 << 4) | (f1 << 3) | (f2 << 2) | (f3 << 1) | f4;
@@ -72,7 +83,6 @@ namespace RS485Client {
     Serial.write(b2);
     Serial.write(crc);
     Serial.flush(); // wait till physical transfer completes
-    delay(3);
     switchToReceive();
   }
 
@@ -127,7 +137,7 @@ namespace RS485Client {
   
       case RETRY_DELAY:
         flushSerialRead();
-        if (millis() - timerMark >= 50) {
+        if (millis() - timerMark >= RETRY_DELAY_INTERVAL) {
           sendPacket();
           changeState(WAIT_ACK);
         }

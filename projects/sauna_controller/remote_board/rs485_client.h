@@ -13,10 +13,6 @@ namespace RS485Client {
 
   void updateFlags(bool f1, bool f2, bool f3, bool f4);
 
-  // Configuration
-  const unsigned long HEARTBEAT_INTERVAL = 3000;
-  const unsigned long ACK_TIMEOUT = 200;
-  const uint8_t MAX_RETRIES = 3;
 
   // State Machine Loop
   enum State { IDLE, SENDING, WAIT_ACK, RETRY_DELAY };

@@ -43,9 +43,10 @@ unsigned long dataReceivedTimerMark = 0;
 float temperatures[TEMP_SENS_COUNT];
 
 void setup() {
+  Serial.begin(38400);
   RS485Server::init(pin_RS485_dir);
   InfoPanel::init(sw_InfoPanel_Led1, sw_InfoPanel_Buzzer);
-  Serial.begin(38400);
+  
   initSwitch(sw_fan_TRIACs);
   initSwitch(sw_fan_Main, true);
   initSwitch(sw_Heater_TRIACs);
