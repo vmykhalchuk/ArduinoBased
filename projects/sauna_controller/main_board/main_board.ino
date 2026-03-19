@@ -173,6 +173,11 @@ void loop() {
   RS485Server::Error rs485Error = RS485Server::popError();
   if (rs485Error != RS485Server::OK) {
     InfoPanel::setCommunicationError();
+    if (rs485Error == RS485Server::NOT_ENOUGH_BYTES_RECEIVED) {
+      blink(sw_InfoPanel_Buzzer, 1, 50);
+    } else {
+      blink(sw_InfoPanel_Buzzer, 2, 50);
+    }
   }
   if (RS485Server::dataReceived) {
     InfoPanel::clearCommunicationError();
@@ -186,6 +191,7 @@ void loop() {
       powerSystemOff();
     }
     InfoPanel::setCommunicationError();
+    blink(sw_InfoPanel_Buzzer, 3, 50);
   }
   InfoPanel::loop();
 }
