@@ -173,10 +173,12 @@ void loop() {
   RS485Server::Error rs485Error = RS485Server::popError();
   if (rs485Error != RS485Server::OK) {
     InfoPanel::setCommunicationError();
-    if (rs485Error == RS485Server::NOT_ENOUGH_BYTES_RECEIVED) {
-      blink(sw_InfoPanel_Buzzer, 1, 100); delay(3000);
-    } else {
-      blink(sw_InfoPanel_Buzzer, 2, 100); delay(3000);
+    if (rs485Error == RS485Server::BAD_CRC) {
+      blink(sw_InfoPanel_Buzzer, 1, 100); delay(2000);
+    } else if (rs485Error == RS485Server::BAD_DATA) {
+      blink(sw_InfoPanel_Buzzer, 2, 100); delay(2000);
+    } else if (rs485Error == RS485Server::NOT_ENOUGH_BYTES_RECEIVED) {
+      blink(sw_InfoPanel_Buzzer, 3, 100); delay(2000);
     }
   }
   if (RS485Server::dataReceived) {
@@ -191,7 +193,7 @@ void loop() {
       powerSystemOff();
     }
     InfoPanel::setCommunicationError();
-    blink(sw_InfoPanel_Buzzer, 3, 50); delay(3000);
+    blink(sw_InfoPanel_Buzzer, 3, 50);
     dataReceivedTimerMark = millis();
   }
   InfoPanel::loop();
