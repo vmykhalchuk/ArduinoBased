@@ -17,7 +17,6 @@ namespace RS485Server {
 
   const unsigned long SWITCH_RX_TO_TX_HOLD = 30; //orig: 3
   const unsigned long SWITCH_TX_TO_RX_WAIT = 20; //orig: 3
-  const unsigned long WAIT_BEFORE_REPLY = 100; //orig: 5
   const unsigned long TRANSMISSION_MAX_TIME_MS = 100; //orig: 100 // FIXME reduce to 50
   
   bool dataRefreshedFlag = false;
@@ -88,7 +87,6 @@ namespace RS485Server {
         }
       }
 
-      delay(WAIT_BEFORE_REPLY); // Required 5ms wait before reply
       switchToTransmit();
       Serial.write(responseByte);
       Serial.flush();

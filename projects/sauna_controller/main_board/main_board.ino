@@ -201,6 +201,32 @@ void loop() {
 
 void handleRS485DataRefreshed() {
   dataReceivedTimerMark = millis();
+
+  bool buzzWasOn = isSwitchOn(sw_InfoPanel_Buzzer);
+  if (buzzWasOn) {
+    delay(1000);
+    switchOff(sw_InfoPanel_Buzzer);
+  }
+  bool rel1WasOn = isSwitchOn(sw_Relay1_ALARM);
+  bool rel2WasOn = isSwitchOn(sw_Relay2_HEAT_FAN);
+  bool rel3WasOn = isSwitchOn(sw_Relay3_POWER);
+  bool rel4WasOn = isSwitchOn(sw_Relay4);
+
+  switchOn(sw_InfoPanel_Buzzer);
+  if (RS485Server::f1) switchOn(sw_Relay1_ALARM); else switchOff(sw_Relay1_ALARM);
+  if (RS485Server::f2) switchOn(sw_Relay2_HEAT_FAN); else switchOff(sw_Relay2_HEAT_FAN);
+  if (RS485Server::f3) switchOn(sw_Relay3_POWER); else switchOff(sw_Relay3_POWER);
+  if (RS485Server::f4) switchOn(sw_Relay4); else switchOff(sw_Relay4);
+
+  delay(1000);
+
+  if (buzzWasOn) switchOn(sw_InfoPanel_Buzzer); else switchOff(sw_InfoPanel_Buzzer);
+  if (rel1WasOn) switchOn(sw_Relay1_ALARM); else switchOff(sw_Relay1_ALARM);
+  if (rel2WasOn) switchOn(sw_Relay2_HEAT_FAN); else switchOff(sw_Relay2_HEAT_FAN);
+  if (rel3WasOn) switchOn(sw_Relay3_POWER); else switchOff(sw_Relay3_POWER);
+  if (rel4WasOn) switchOn(sw_Relay4); else switchOff(sw_Relay4);
+
+  
   
   if (RS485Server::f4) fireAlarm = true; // will not reset unless full system reset!
   

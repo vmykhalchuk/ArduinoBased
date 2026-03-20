@@ -33,3 +33,8 @@ void blink(SwitchDef swDef, uint8_t times, unsigned int pulseMs, unsigned int de
     delay(delayMs);
   }
 }
+
+bool isSwitchOn(SwitchDef swDef) {
+  bool isHigh = digitalRead(swDef.pinNo) == HIGH;
+  return swDef.isActiveHigh ? isHigh : !isHigh;
+}

@@ -26,4 +26,6 @@ void switchOnOrOff(SwitchDef swDef, bool on);
 //  blink(swDef, 5, 200, 500) - blink 5 times, 200ms pulses with 500ms delay after each pulse
 void blink(SwitchDef swDef, uint8_t times, unsigned int pulseMs = 150, unsigned int delayMs = 0);
 
+bool isSwitchOn(SwitchDef swDef);
+
 #endif
