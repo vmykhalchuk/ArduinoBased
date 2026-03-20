@@ -226,7 +226,7 @@ void handleRS485DataRefreshed() {
   if (rel3WasOn) switchOn(sw_Relay3_POWER); else switchOff(sw_Relay3_POWER);
   if (rel4WasOn) switchOn(sw_Relay4); else switchOff(sw_Relay4);
 
-  
+  if (true) return;
   
   if (RS485Server::f4) fireAlarm = true; // will not reset unless full system reset!
   

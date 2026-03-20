@@ -6,6 +6,7 @@ void initSwitch(SwitchDef swDef, bool initInOnState) {
   } else {
     switchOff(swDef);
   }
+  swDef.isOn = initInOnState;
   pinMode(swDef.pinNo, OUTPUT);
 }
 
@@ -24,6 +25,10 @@ void switchOnOrOff(SwitchDef swDef, bool on) {
   else switchOff(swDef);
 }
 
+void toggleSwitch(SwitchDef swDef) {
+  if (swDef.isOn) switchOff(swDef); else switchOn(swDef);
+}
+
 void blink(SwitchDef swDef, uint8_t times, unsigned int pulseMs, unsigned int delayMs) {
   if (delayMs == 0) delayMs = pulseMs;
   for (uint8_t i = 0; i < times; i++) {
@@ -35,6 +40,5 @@ void blink(SwitchDef swDef, uint8_t times, unsigned int pulseMs, unsigned int de
 }
 
 bool isSwitchOn(SwitchDef swDef) {
-  bool isHigh = digitalRead(swDef.pinNo) == HIGH;
-  return swDef.isActiveHigh ? isHigh : !isHigh;
+  return swDef.isOn;
 }

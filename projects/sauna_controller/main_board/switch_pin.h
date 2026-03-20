@@ -6,6 +6,7 @@
 struct SwitchDef {
   int pinNo;
   bool isActiveHigh;
+  bool isOn;
 };
 
 const SwitchDef SW_DEF_EMPTY = {-1, false};
@@ -19,6 +20,8 @@ void switchOff(SwitchDef swDef);
 
 // Toggle switch into On (if 'on' is true) or Off (if 'on' is false) position
 void switchOnOrOff(SwitchDef swDef, bool on);
+
+void toggleSwitch(SwitchDef swDef);
 
 // example calls:
 //  blink(swDef, 5) - blink 5 times, 150ms pulses with 150ms delay after each pulse
