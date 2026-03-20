@@ -18,8 +18,8 @@ void initSwitch(SwitchDef swDef, bool initInOnState = false);
 void switchOn(SwitchDef swDef);
 void switchOff(SwitchDef swDef);
 
-// Toggle switch into On (if 'on' is true) or Off (if 'on' is false) position
-void switchOnOrOff(SwitchDef swDef, bool on);
+// Toggle switch toggle to On (if 'on' is true) or Off (if 'on' is false) position
+void switchToggleTo(SwitchDef swDef, bool on);
 
 void toggleSwitch(SwitchDef swDef);
 

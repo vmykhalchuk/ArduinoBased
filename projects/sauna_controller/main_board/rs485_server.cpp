@@ -3,53 +3,53 @@
 
 namespace RS485Server {
   
-  Error errorCode = OK;
+  Error _errorCode = OK;
 
   Error popError() {
-    Error e = errorCode;
-    errorCode = OK;
+    Error e = _errorCode;
+    _errorCode = OK;
     return e;
   }
   
   Error peekError() {
-    return errorCode;
+    return _errorCode;
   }
 
   const unsigned long SWITCH_RX_TO_TX_HOLD = 30; //orig: 3
   const unsigned long SWITCH_TX_TO_RX_WAIT = 20; //orig: 3
   const unsigned long TRANSMISSION_MAX_TIME_MS = 100; //orig: 100 // FIXME reduce to 50
   
-  bool dataRefreshedFlag = false;
+  bool _dataRefreshedFlag = false;
   bool f1 = false, f2 = false;
   bool f3 = false, f4 = false;
 
-  static bool rs_pinDirIsSet = false;
-  static int rs_pinDir = 0;
+  static bool _pinDirIsSet = false;
+  static int _pinDir = 0;
 
-  static bool serial_dataReceivingStarted = false;
-  static unsigned long timerMark = 0;
+  static bool _isDataReceivingStarted = false;
+  static unsigned long _timerMark = 0;
 
   bool peekDataRefreshedFlag() {
-    return dataRefreshedFlag;
+    return _dataRefreshedFlag;
   }
   bool popDataRefreshedFlag() {
-    bool res = dataRefreshedFlag;
-    dataRefreshedFlag = false;
+    bool res = _dataRefreshedFlag;
+    _dataRefreshedFlag = false;
     return res;
   }
     
   void init(int pinDir) {
-    rs_pinDir = pinDir;
-    rs_pinDirIsSet = true;
+    _pinDir = pinDir;
+    _pinDirIsSet = true;
     switchToReceive();
-    pinMode(pinDir, OUTPUT);
+    pinMode(_pinDir, OUTPUT);
     delay(100); flushSerialRead();
   }
 
   void loop() {
-    if (!serial_dataReceivingStarted && Serial.available()) {
-      serial_dataReceivingStarted = true;
-      timerMark = millis();
+    if (!_isDataReceivingStarted && Serial.available()) {
+      _isDataReceivingStarted = true;
+      _timerMark = millis();
     }
     
     if (Serial.available() >= 3) {
@@ -59,7 +59,7 @@ namespace RS485Server {
       uint8_t receivedCRC = Serial.read();
       
       flushSerialRead(); // flush remaining bytes if present
-      serial_dataReceivingStarted = false;
+      _isDataReceivingStarted = false;
     
       uint8_t payload[2] = {b1, b2};
       uint8_t calcCRC = calculateCRC8(payload, 2);
@@ -74,16 +74,16 @@ namespace RS485Server {
         f3 = ! ((b1 >> 1) & 1);
         f2 = ! ((b1 >> 2) & 1);
         f1 = ! ((b1 >> 3) & 1);
-        dataRefreshedFlag = true;
+        _dataRefreshedFlag = true;
         
       } else {
         
         if (!crcValid) {
           responseByte = 0x96; // CRC_ERR
-          errorCode = BAD_CRC;
+          _errorCode = BAD_CRC;
         } else {
           responseByte = 0x99; // DATA_ERR
-          errorCode = BAD_DATA;
+          _errorCode = BAD_DATA;
         }
       }
 
@@ -93,11 +93,11 @@ namespace RS485Server {
       switchToReceive();
     }
 
-    if (serial_dataReceivingStarted && (millis() - timerMark >= TRANSMISSION_MAX_TIME_MS)) {
+    if (_isDataReceivingStarted && (millis() - _timerMark >= TRANSMISSION_MAX_TIME_MS)) {
       // error situation, ignore received data
-      errorCode = NOT_ENOUGH_BYTES_RECEIVED;
+      _errorCode = NOT_ENOUGH_BYTES_RECEIVED;
       flushSerialRead();
-      serial_dataReceivingStarted = false;
+      _isDataReceivingStarted = false;
     }
   }
 
@@ -109,11 +109,11 @@ namespace RS485Server {
 
   static void switchToReceive() {
     delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes
-    digitalWrite(rs_pinDir, LOW); // switch to Receiving mode
+    digitalWrite(_pinDir, LOW); // switch to Receiving mode
   }
   
   static void switchToTransmit() {
-    digitalWrite(rs_pinDir, HIGH); // switch to Transmission mode
+    digitalWrite(_pinDir, HIGH); // switch to Transmission mode
     delay(SWITCH_RX_TO_TX_HOLD); // let MAX IC to stabilize output
   }
   

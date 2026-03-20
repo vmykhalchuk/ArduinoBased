@@ -5,7 +5,7 @@
 
 namespace TM1637 {
 
-  void init(int clockPin, int dioPin);
+  void init(int pinClk, int pinDio);
 
   void updateDisplay(int num, bool showColon);
 

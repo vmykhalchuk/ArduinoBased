@@ -204,8 +204,9 @@ void handleRS485DataRefreshed() {
 
   bool buzzWasOn = isSwitchOn(sw_InfoPanel_Buzzer);
   if (buzzWasOn) {
-    delay(1000);
+    delay(200);
     switchOff(sw_InfoPanel_Buzzer);
+    delay(200);
   }
   bool rel1WasOn = isSwitchOn(sw_Relay1_ALARM);
   bool rel2WasOn = isSwitchOn(sw_Relay2_HEAT_FAN);

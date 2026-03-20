@@ -16,6 +16,7 @@ namespace RS485Server {
   // (doesn't necessarily mean the f1-f4 flags have changed)
   bool peekDataRefreshedFlag();
   bool popDataRefreshedFlag();
+  
   extern bool f1, f2, f3, f4;
 
   void init(int pinDir);

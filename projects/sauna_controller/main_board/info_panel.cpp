@@ -2,10 +2,11 @@
 
 namespace InfoPanel {
 
-  static SwitchDef sw_Led1 = SW_DEF_EMPTY, sw_Buzzer = SW_DEF_EMPTY;
+  static SwitchDef _sw_Led1 = SW_DEF_EMPTY, _sw_Buzzer = SW_DEF_EMPTY;
 
   void init(SwitchDef sw_Led1, SwitchDef sw_Buzzer) {
-    InfoPanel::sw_Led1 = sw_Led1;
+    _sw_Led1 = sw_Led1;
+    _sw_Buzzer = sw_Buzzer;
   }
 
   void setCommunicationError() {

@@ -3,58 +3,58 @@
 namespace TM1637 {
 
   // Seven-segment patterns for 0-9
-  static const uint8_t segmentMap[] = {
+  static const uint8_t SEGMENT_MAP[] = {
     0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f
   };
   
-  static bool isInitialized = false;
-  static int pinClk;
-  static int pinDio;
+  static bool _isInitialized = false;
+  static int _pinClk;
+  static int _pinDio;
   
-  void init(int clockPin, int dioPin) {
-    pinClk = clockPin;
-    pinDio = dioPin;
-    pinMode(pinClk, OUTPUT);
-    pinMode(pinDio, OUTPUT);
-    isInitialized = true;
+  void init(int pinClk, int pinDio) {
+    _pinClk = pinClk;
+    _pinDio = pinDio;
+    pinMode(_pinClk, OUTPUT);
+    pinMode(_pinDio, OUTPUT);
+    _isInitialized = true;
   }
   
   // --- Low Level Communication ---
   
   static void start() {
-    digitalWrite(pinClk, HIGH);
-    digitalWrite(pinDio, HIGH);
+    digitalWrite(_pinClk, HIGH);
+    digitalWrite(_pinDio, HIGH);
     delayMicroseconds(5); // can be 2 (try it first), same for all 5us
-    digitalWrite(pinDio, LOW);
+    digitalWrite(_pinDio, LOW);
   }
   
   static void stop() {
-    digitalWrite(pinClk, LOW);
-    digitalWrite(pinDio, LOW);
+    digitalWrite(_pinClk, LOW);
+    digitalWrite(_pinDio, LOW);
     delayMicroseconds(5);
-    digitalWrite(pinClk, HIGH);
-    digitalWrite(pinDio, HIGH);
+    digitalWrite(_pinClk, HIGH);
+    digitalWrite(_pinDio, HIGH);
     delayMicroseconds(5);
   }
   
   static bool writeByte(uint8_t b) {
     for (uint8_t i = 0; i < 8; i++) {
-      digitalWrite(pinClk, LOW);
-      digitalWrite(pinDio, (b & 0x01) ? HIGH : LOW); // Send LSB first
+      digitalWrite(_pinClk, LOW);
+      digitalWrite(_pinDio, (b & 0x01) ? HIGH : LOW); // Send LSB first
       b >>= 1;
       delayMicroseconds(5);
-      digitalWrite(pinClk, HIGH);
+      digitalWrite(_pinClk, HIGH);
       delayMicroseconds(5);
     }
     
     // Wait for ACK
-    digitalWrite(pinClk, LOW);
-    pinMode(pinDio, INPUT);
+    digitalWrite(_pinClk, LOW);
+    pinMode(_pinDio, INPUT);
     delayMicroseconds(5);
-    digitalWrite(pinClk, HIGH);
+    digitalWrite(_pinClk, HIGH);
     delayMicroseconds(5);
-    bool ack = digitalRead(pinDio) == 0;
-    pinMode(pinDio, OUTPUT);
+    bool ack = digitalRead(_pinDio) == 0;
+    pinMode(_pinDio, OUTPUT);
     return ack;
   }
   
@@ -62,10 +62,10 @@ namespace TM1637 {
   
   void updateDisplay(int num, bool showColon) {
     uint8_t digits[4];
-    digits[0] = segmentMap[(num / 1000) % 10];
-    digits[1] = segmentMap[(num / 100) % 10];
-    digits[2] = segmentMap[(num / 10) % 10];
-    digits[3] = segmentMap[num % 10];
+    digits[0] = SEGMENT_MAP[(num / 1000) % 10];
+    digits[1] = SEGMENT_MAP[(num / 100) % 10];
+    digits[2] = SEGMENT_MAP[(num / 10) % 10];
+    digits[3] = SEGMENT_MAP[num % 10];
   
     // apply colon to second digit
     if (showColon) {

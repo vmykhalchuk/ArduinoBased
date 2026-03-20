@@ -20,7 +20,7 @@ void switchOff(SwitchDef swDef) {
   digitalWrite(swDef.pinNo, offState ? HIGH : LOW);
 }
 
-void switchOnOrOff(SwitchDef swDef, bool on) {
+void switchToggleTo(SwitchDef swDef, bool on) {
   if (on) switchOn(swDef);
   else switchOff(swDef);
 }
