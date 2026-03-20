@@ -46,7 +46,7 @@ namespace RS485Client {
   void updateFlags(bool f1, bool f2, bool f3, bool f4) {
     _f1 = f1;
     _f2 = f2;
-    _f3 = f2;
+    _f3 = f3;
     _f4 = f4;
   }
   
@@ -66,12 +66,17 @@ namespace RS485Client {
       return;
     }
   
-    uint8_t f1 = _f1 ? 1 : 0, f2 = _f2 ? 1 : 0, f3 = _f3 ? 1 : 0, f4 = _f4 ? 1 : 0;
-    uint8_t f1Inv = _f1 ? 0 : 1, f2Inv = _f2 ? 0 : 1, f3Inv = _f3 ? 0 : 1, f4Inv = _f4 ? 0 : 1;
+    uint8_t f1 = _f1 ? 1 : 0,
+            f2 = _f2 ? 1 : 0,
+            f3 = _f3 ? 1 : 0,
+            f4 = _f4 ? 1 : 0;
     
-    uint8_t b1 = (f1 << 7) | (f2 << 6) | (f3 << 5) | (f4 << 4) | (f1Inv << 3) | (f2Inv << 2) | (f3Inv << 1) | f4Inv;
+    uint8_t b1 = (f1 << 7) | (f2 << 6) | (f3 << 5) | (f4 << 4) |
+                 (!f1 << 3) | (!f2 << 2) | (!f3 << 1) | !f4;
              
-    uint8_t b2 = (f1Inv << 7) | (f2Inv << 6) | (f3Inv << 5) | (f4Inv << 4) | (f1 << 3) | (f2 << 2) | (f3 << 1) | f4;
+    uint8_t b2 = (!f1 << 7) | (!f2 << 6) | (!f3 << 5) | (!f4 << 4) |
+                 (f1 << 3) | (f2 << 2) | (f3 << 1) | f4;
+                 
     uint8_t payload[2] = {b1, b2};
     uint8_t crc = calculateCRC8(payload, 2);
   
