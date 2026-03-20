@@ -70,10 +70,10 @@ namespace RS485Server {
       
       if (crcValid && dataValid) {
         responseByte = 0x66; // ACK
-        f4 = !(b1 & 0B1);
-        f3 = !(b1 & 0B01);
-        f2 = !(b1 & 0B001);
-        f1 = !(b1 & 0B0001);
+        f4 = ! (b1 & 1);
+        f3 = ! ((b1 >> 1) & 1);
+        f2 = ! ((b1 >> 2) & 1);
+        f1 = ! ((b1 >> 3) & 1);
         dataRefreshedFlag = true;
         
       } else {
