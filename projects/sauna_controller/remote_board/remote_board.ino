@@ -3,8 +3,12 @@
 #include "tm1637.h"
 
 int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
-int pin_TM1637_CLK = 3;
-int pin_TM1637_DIO = 4;
+int pin_TM1637_CLK = 4;
+int pin_TM1637_DIO = 5;
+
+int pin_btn_Plus = 6;
+int pin_btn_Minus = 7;
+int pin_btn_Power = 8;
 
 bool powerOnRequest = false;
 bool fanOnRequest = false;

@@ -3,6 +3,7 @@
 #include "rs485_server.h"
 #include "info_panel.h"
 #include "ds18b20.h"
+#include "tests.h"
 
 const int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 
@@ -61,9 +62,9 @@ void setup() {
   
   pinMode(pin_TestBtn, INPUT);
   delay(20);
-  bool runTestsSelected = false;
+  bool isRunTests = false;
   if (digitalRead(pin_TestBtn) == HIGH) {
-    runTestsSelected = true;
+    isRunTests = true;
   }
   digitalWrite(pin_TestBtn, LOW);
   pinMode(pin_TestBtn, OUTPUT);
@@ -72,10 +73,11 @@ void setup() {
   switchOff(sw_InfoPanel_Buzzer);
   dataReceivedTimerMark = millis();
 
-  if (runTestsSelected) {
+  if (isRunTests) {
     while (true) {
        delay(2000);
-       runTests(); 
+       Tests::runTests(sw_InfoPanel_Buzzer, sw_fan_Main, sw_fan_TRIACs, sw_Heater_TRIACs,
+                       sw_Relay1_ALARM, sw_Relay2_HEAT_FAN, sw_Relay3_POWER, sw_Relay4); 
     }
   }
 
@@ -92,47 +94,6 @@ void setup() {
     stopBecauseOfCriticalError(3);
   }
   */
-}
-
-void runTests() {
-  for (uint8_t i = 1; i <= 5; i++) {
-    blink(sw_InfoPanel_Buzzer, i);
-    // FIXME Make it more solid test - to check all systems working
-    switch (i) {
-      case 1:
-        delay(1000);
-        switchOn(sw_fan_Main);
-        delay(3000);
-        switchOff(sw_fan_Main);
-        break;
-      case 2:
-        delay(1000);
-        switchOn(sw_fan_TRIACs);
-        delay(3000);
-        switchOff(sw_fan_TRIACs);
-        break;
-      case 3:
-        delay(1000);
-        switchOn(sw_Heater_TRIACs);
-        delay(3000);
-        switchOff(sw_Heater_TRIACs);
-        break;
-      case 4:
-        delay(1000);
-        switchOn(sw_Relay1_ALARM); switchOn(sw_Relay2_HEAT_FAN);
-        delay(3000);
-        switchOff(sw_Relay1_ALARM); switchOff(sw_Relay2_HEAT_FAN);
-        break;
-      case 5:
-        delay(1000);
-        switchOn(sw_Relay3_POWER); switchOn(sw_Relay4);
-        delay(3000);
-        switchOff(sw_Relay3_POWER); switchOff(sw_Relay4);
-        break;
-    }
-
-    delay(2000);
-  }
 }
 
 void powerSystemOn() {
@@ -153,7 +114,7 @@ void powerSystemOn() {
 void powerSystemOff() {
   switchOff(sw_Heater_TRIACs);
   switchOff(sw_Relay3_POWER);
-  //switchOff(sw_Relay2_ALARM); DO NOT SWITCH IT OFF IF ALREADY ON!!!
+  //switchOff(sw_Relay1_ALARM); DO NOT SWITCH IT OFF IF ALREADY ON!!!
   switchOff(sw_Relay2_HEAT_FAN);
   switchOff(sw_Relay4);
 
@@ -199,35 +160,14 @@ void loop() {
   InfoPanel::loop();
 }
 
+
 void handleRS485DataRefreshed() {
   dataReceivedTimerMark = millis();
 
-  bool buzzWasOn = isSwitchOn(sw_InfoPanel_Buzzer);
-  if (buzzWasOn) {
-    delay(200);
-    switchOff(sw_InfoPanel_Buzzer);
-    delay(200);
+  if (false) {
+    Tests::testDataRefresh(sw_InfoPanel_Buzzer, sw_Relay1_ALARM, sw_Relay2_HEAT_FAN, sw_Relay3_POWER, sw_Relay4);
+    return;
   }
-  bool rel1WasOn = isSwitchOn(sw_Relay1_ALARM);
-  bool rel2WasOn = isSwitchOn(sw_Relay2_HEAT_FAN);
-  bool rel3WasOn = isSwitchOn(sw_Relay3_POWER);
-  bool rel4WasOn = isSwitchOn(sw_Relay4);
-
-  switchOn(sw_InfoPanel_Buzzer);
-  if (RS485Server::f1) switchOn(sw_Relay1_ALARM); else switchOff(sw_Relay1_ALARM);
-  if (RS485Server::f2) switchOn(sw_Relay2_HEAT_FAN); else switchOff(sw_Relay2_HEAT_FAN);
-  if (RS485Server::f3) switchOn(sw_Relay3_POWER); else switchOff(sw_Relay3_POWER);
-  if (RS485Server::f4) switchOn(sw_Relay4); else switchOff(sw_Relay4);
-
-  delay(1000);
-
-  if (buzzWasOn) switchOn(sw_InfoPanel_Buzzer); else switchOff(sw_InfoPanel_Buzzer);
-  if (rel1WasOn) switchOn(sw_Relay1_ALARM); else switchOff(sw_Relay1_ALARM);
-  if (rel2WasOn) switchOn(sw_Relay2_HEAT_FAN); else switchOff(sw_Relay2_HEAT_FAN);
-  if (rel3WasOn) switchOn(sw_Relay3_POWER); else switchOff(sw_Relay3_POWER);
-  if (rel4WasOn) switchOn(sw_Relay4); else switchOff(sw_Relay4);
-
-  if (true) return;
   
   if (RS485Server::f4) fireAlarm = true; // will not reset unless full system reset!
   
@@ -246,6 +186,7 @@ void handleRS485DataRefreshed() {
     }
   }
 
+  //switchToggleTo(sw_Relay2_HEAT_FAN, RS485Server::f2);//fanOnRequest
   if (fanOnRequest != RS485Server::f2) {
     fanOnRequest = RS485Server::f2;
     if (fanOnRequest) {
@@ -255,6 +196,7 @@ void handleRS485DataRefreshed() {
     }
   }
 
+  //switchToggleTo(sw_Heater_TRIACs, RS485Server::f3);//heatRequest
   if (heatRequest != RS485Server::f3) {
     heatRequest = RS485Server::f3;
     if (heatRequest) {
