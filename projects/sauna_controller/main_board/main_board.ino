@@ -81,19 +81,19 @@ void setup() {
     }
   }
 
-  /*
+  
   // init temp sensors
   bool allSensorsPresent = true;
-  for (int i = 0; i < TEMP_SENS_COUNT; i++) {
+  for (int i = 0; i < 1/*FIXME TEMP_SENS_COUNT*/; i++) {
     allSensorsPresent &= DS18B20::setResolution(pins_DS18B20[i], 0x3F);
     temperatures[i] = DS18B20::readTemperature(pins_DS18B20[i]);
   }
 
   if (!allSensorsPresent) {
     // critical error, we cannot continue operation
-    stopBecauseOfCriticalError(3);
+    fullStopBecauseOfCriticalError(3);
   }
-  */
+  
 }
 
 void powerSystemOn() {
@@ -121,12 +121,12 @@ void powerSystemOff() {
   isSystemPoweredOn = false;
 }
 
-void stopBecauseOfCriticalError(int blinkError) {
+void fullStopBecauseOfCriticalError(int blinkError) {
   powerSystemOff();
   digitalWrite(LED_BUILTIN, HIGH);
   while (true) {
     delay(3000);
-    blink(sw_InfoPanel_Buzzer, blinkError, 600);
+    blink(sw_InfoPanel_Buzzer, blinkError, 700, 300);
   }
 }
 
@@ -186,23 +186,13 @@ void handleRS485DataRefreshed() {
     }
   }
 
-  //switchToggleTo(sw_Relay2_HEAT_FAN, RS485Server::f2);//fanOnRequest
   if (fanOnRequest != RS485Server::f2) {
     fanOnRequest = RS485Server::f2;
-    if (fanOnRequest) {
-      switchOn(sw_Relay2_HEAT_FAN);
-    } else {
-      switchOff(sw_Relay2_HEAT_FAN);
-    }
+    switchToggleTo(sw_Relay2_HEAT_FAN, fanOnRequest);
   }
 
-  //switchToggleTo(sw_Heater_TRIACs, RS485Server::f3);//heatRequest
   if (heatRequest != RS485Server::f3) {
     heatRequest = RS485Server::f3;
-    if (heatRequest) {
-      switchOn(sw_Heater_TRIACs);
-    } else {
-      switchOff(sw_Heater_TRIACs);
-    }
+    switchToggleTo(sw_Heater_TRIACs, heatRequest);
   }
 }
