@@ -20,15 +20,19 @@ unsigned int digitsDisplayValue = 0;
 bool digitsDisplayShowDoubleDots = false;
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(38400);
   RS485Client::init(pin_RS485_dir);
   TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
   TM1637::updateDisplay(1234, true);
+  digitalWrite(LED_BUILTIN, HIGH);
   delay(2000);
   TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 bool btnPowerLastSaved = false;
+int j = 100;
 void loop() {
   RS485Client::loop();
   testLoop();
@@ -39,8 +43,10 @@ void loop() {
 
   if (btnPowerLastSaved != InputButton::isPressed(btnPower)) {
     btnPowerLastSaved = !btnPowerLastSaved;
-    TM1637::updateDisplay(digitsDisplayValue, btnPowerLastSaved);
+    TM1637::updateDisplay(j++, btnPowerLastSaved);
   }
+
+  digitalWrite(LED_BUILTIN, InputButton::isIdleState(btnPower));
 
   if (InputButton::isError(btnPower)) {
     TM1637::updateDisplay(9999, true);

@@ -6,7 +6,7 @@
 
 namespace InputButton {
 
-  static const unsigned int DEBOUNCE_THRESHOLD_MS = 50;
+  static const unsigned int DEBOUNCE_THRESHOLD_MS = 300;//50;
 
   enum SMState { NOT_INITIALIZED, IDLE, DEBOUNCE_WAITING, ERROR };
   
@@ -30,6 +30,8 @@ namespace InputButton {
   bool isPressed(Def &def);
 
   bool isError(Def &def);
+
+  bool isIdleState(Def &def);
 }
 
 #endif

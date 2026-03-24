@@ -49,4 +49,8 @@ namespace InputButton {
   bool isError(Def &def) {
     return def._.smState == ERROR;
   }
+
+  bool isIdleState(Def &def) {
+    return def._.smState == IDLE;
+  }
 }
