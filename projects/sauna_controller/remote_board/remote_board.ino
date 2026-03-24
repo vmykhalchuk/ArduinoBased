@@ -22,6 +22,8 @@ void setup() {
   Serial.begin(38400);
   RS485Client::init(pin_RS485_dir);
   TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
+  TM1637::updateDisplay(1234, true);
+  delay(2000);
   TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
 }
 
