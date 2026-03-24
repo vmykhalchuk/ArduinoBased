@@ -1,21 +1,23 @@
 #include <Arduino.h>
 #include "rs485_client.h"
 #include "tm1637.h"
+#include "input_button.h"
 
 int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 int pin_TM1637_CLK = 4;
 int pin_TM1637_DIO = 5;
 
-int pin_btn_Plus = 6;
-int pin_btn_Minus = 7;
-int pin_btn_Power = 8;
+InputButton::Def btnPlus = {6, false, true};
+//InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePoolup = true };
+InputButton::Def btnMinus = { .pinNo = 7, .isActiveHigh = false, .enablePoolup = true };
+InputButton::Def btnPower = { .pinNo = 8, .isActiveHigh = false, .enablePoolup = true };
 
 bool powerOnRequest = false;
 bool fanOnRequest = false;
 bool heatRequest = false;
 bool fireAlarm = false; // in case fire is registered!
 
-int digitsDisplayValue = 0;
+unsigned int digitsDisplayValue = 0;
 bool digitsDisplayShowDoubleDots = false;
 
 void setup() {
@@ -27,9 +29,25 @@ void setup() {
   TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
 }
 
+bool btnPowerLastSaved = false;
 void loop() {
   RS485Client::loop();
   testLoop();
+
+  //InputButton::loopFor(btnPlus);
+  //InputButton::loopFor(btnMinus);
+  InputButton::loopFor(btnPower);
+
+  if (btnPowerLastSaved != InputButton::isPressed(btnPower)) {
+    btnPowerLastSaved = !btnPowerLastSaved;
+    TM1637::updateDisplay(digitsDisplayValue, btnPowerLastSaved);
+  }
+
+  if (InputButton::isError(btnPower)) {
+    TM1637::updateDisplay(9999, true);
+    delay(500);
+    TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
+  }
 }
 
 int i = -1;
