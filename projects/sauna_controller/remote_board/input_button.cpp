@@ -14,6 +14,7 @@ namespace InputButton {
     switch (_.smState) {
       case NOT_INITIALIZED:
         pinMode(def.pinNo, INPUT);
+        if (def.enablePoolup) digitalWrite(def.pinNo, HIGH);
         _.btnState = digitalRead(def.pinNo);
         _.lastStateChangedTmstmp = _ms;
         _.timerMark = _ms;

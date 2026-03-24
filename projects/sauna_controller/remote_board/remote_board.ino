@@ -7,8 +7,7 @@ int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 int pin_TM1637_CLK = 4;
 int pin_TM1637_DIO = 5;
 
-InputButton::Def btnPlus = {6, false, true};
-//InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePoolup = true };
+InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePoolup = true };
 InputButton::Def btnMinus = { .pinNo = 7, .isActiveHigh = false, .enablePoolup = true };
 InputButton::Def btnPower = { .pinNo = 8, .isActiveHigh = false, .enablePoolup = true };
 
