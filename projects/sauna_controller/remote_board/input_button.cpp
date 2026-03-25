@@ -3,12 +3,7 @@
 namespace InputButton {
 
   void loopFor(Def &def) {
-    Internal _ = def._;
-    if (_.v2 != -2) {
-      // Default initialization doesn't work!!! error!
-      _.smState = ERROR;
-    }
-    _.v2 = 0;
+    Internal &_ = def._;
 
     unsigned long _ms = millis();
     switch (_.smState) {
@@ -50,7 +45,4 @@ namespace InputButton {
     return def._.smState == ERROR;
   }
 
-  bool isIdleState(Def &def) {
-    return def._.smState == IDLE;
-  }
 }

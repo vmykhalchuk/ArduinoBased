@@ -31,28 +31,37 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
 }
 
-bool btnPowerLastSaved = false;
+bool btnPlusLastSaved = true;
+bool btnMinusLastSaved = true;
+bool btnPowerLastSaved = true;
 int j = 100;
 void loop() {
   RS485Client::loop();
-  testLoop();
+  //testLoop();
 
-  //InputButton::loopFor(btnPlus);
-  //InputButton::loopFor(btnMinus);
+  InputButton::loopFor(btnPlus);
+  InputButton::loopFor(btnMinus);
   InputButton::loopFor(btnPower);
+
+  if (btnPlusLastSaved != InputButton::isPressed(btnPlus)) {
+    btnPlusLastSaved = !btnPlusLastSaved;
+    if (btnPlusLastSaved) j++;
+  }
+
+  if (btnMinusLastSaved != InputButton::isPressed(btnMinus)) {
+    btnMinusLastSaved = !btnMinusLastSaved;
+    if (btnMinusLastSaved) j--;
+  }
 
   if (btnPowerLastSaved != InputButton::isPressed(btnPower)) {
     btnPowerLastSaved = !btnPowerLastSaved;
-    TM1637::updateDisplay(j++, btnPowerLastSaved);
+    digitsDisplayShowDoubleDots = btnPowerLastSaved; //TM1637::updateDisplay(j, btnPowerLastSaved);
+    powerOnRequest = btnPowerLastSaved;
+    RS485Client::updateFlags(powerOnRequest, fanOnRequest, heatRequest, fireAlarm);
   }
 
-  digitalWrite(LED_BUILTIN, InputButton::isIdleState(btnPower));
-
-  if (InputButton::isError(btnPower)) {
-    TM1637::updateDisplay(9999, true);
-    delay(500);
-    TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
-  }
+  digitsDisplayValue = j;
+  loop_digitsDisplay();
 }
 
 int i = -1;
