@@ -24,7 +24,7 @@ void setup() {
   Serial.begin(38400);
   RS485Client::init(pin_RS485_dir);
   TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
-  TM1637::updateDisplay(1234, true);
+  TM1637::updateDisplayWithError();
   digitalWrite(LED_BUILTIN, HIGH);
   delay(2000);
   TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
@@ -35,24 +35,28 @@ bool btnPlusLastSaved = true;
 bool btnMinusLastSaved = true;
 bool btnPowerLastSaved = true;
 int j = 100;
+
+uint8_t _o_b = 0;
+uint8_t _o_d = 0;
 void loop() {
   RS485Client::loop();
   //testLoop();
 
-  InputButton::loopFor(btnPlus);
-  InputButton::loopFor(btnMinus);
-  InputButton::loopFor(btnPower);
+  switch (_o_b) { // loop only one button at a time to make RS485 loop more efficient
+    case 0: InputButton::loopFor(btnPlus); break;
+    case 1: InputButton::loopFor(btnMinus); break;
+    case 2: InputButton::loopFor(btnPower); break;
+    default: _o_b = 0;
+  } _o_b++; _o_b = _o_b % 3;
 
   if (btnPlusLastSaved != InputButton::isPressed(btnPlus)) {
     btnPlusLastSaved = !btnPlusLastSaved;
     if (btnPlusLastSaved) j++;
   }
-
   if (btnMinusLastSaved != InputButton::isPressed(btnMinus)) {
     btnMinusLastSaved = !btnMinusLastSaved;
     if (btnMinusLastSaved) j--;
   }
-
   if (btnPowerLastSaved != InputButton::isPressed(btnPower)) {
     btnPowerLastSaved = !btnPowerLastSaved;
     digitsDisplayShowDoubleDots = btnPowerLastSaved; //TM1637::updateDisplay(j, btnPowerLastSaved);
@@ -60,8 +64,11 @@ void loop() {
     RS485Client::updateFlags(powerOnRequest, fanOnRequest, heatRequest, fireAlarm);
   }
 
-  digitsDisplayValue = j;
-  loop_digitsDisplay();
+  if (++_o_d >= 5) {
+    digitsDisplayValue = j;
+    loop_digitsDisplay();
+    _o_d = 0;
+  }
 }
 
 int i = -1;
@@ -91,7 +98,7 @@ int digitsDisplayValue_displayed = digitsDisplayValue;
 bool digitsDisplayShowDoubleDots_displayed = digitsDisplayShowDoubleDots;
 void loop_digitsDisplay() {
   if (digitsDisplayValue != digitsDisplayValue_displayed || digitsDisplayShowDoubleDots != digitsDisplayShowDoubleDots_displayed) {
-    TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
+    TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots, false, i);
     digitsDisplayValue_displayed = digitsDisplayValue;
     digitsDisplayShowDoubleDots_displayed = digitsDisplayShowDoubleDots;
   }

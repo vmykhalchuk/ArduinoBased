@@ -15,9 +15,9 @@ namespace RS485Server {
     return _errorCode;
   }
 
-  const unsigned long SWITCH_RX_TO_TX_HOLD = 30; //orig: 3
-  const unsigned long SWITCH_TX_TO_RX_WAIT = 20; //orig: 3
-  const unsigned long TRANSMISSION_MAX_TIME_MS = 100; //orig: 100 // FIXME reduce to 50
+  const unsigned long SWITCH_RX_TO_TX_HOLD = 3;
+  const unsigned long SWITCH_TX_TO_RX_WAIT = 3;
+  const unsigned long PACKET_TRANSMISSION_MAX_TIME_MS = 30; // !!! depends on baud rate and bytes in single transmission packet
   
   bool _dataRefreshedFlag = false;
   bool f1 = false, f2 = false;
@@ -93,7 +93,7 @@ namespace RS485Server {
       switchToReceive();
     }
 
-    if (_isDataReceivingStarted && (millis() - _timerMark >= TRANSMISSION_MAX_TIME_MS)) {
+    if (_isDataReceivingStarted && (millis() - _timerMark >= PACKET_TRANSMISSION_MAX_TIME_MS)) {
       // error situation, ignore received data
       _errorCode = NOT_ENOUGH_BYTES_RECEIVED;
       flushSerialRead();

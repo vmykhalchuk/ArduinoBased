@@ -17,12 +17,12 @@ namespace RS485Client {
   }
 
   // Configuration
-  const unsigned long HEARTBEAT_INTERVAL = 6000; // orig: 3000
-  const unsigned long ACK_TIMEOUT = 800; //orig: 200
-  const unsigned long SWITCH_RX_TO_TX_HOLD = 30; //orig: 3
-  const unsigned long SWITCH_TX_TO_RX_WAIT = 20; //orig: 3
-  const unsigned long RETRY_DELAY_INTERVAL = 200; // orig: 50
-  const uint8_t MAX_RETRIES = 3;
+  const unsigned long HEARTBEAT_INTERVAL = 2000;
+  const unsigned long ACK_TIMEOUT = 100;
+  const unsigned long SWITCH_RX_TO_TX_HOLD = 3;
+  const unsigned long SWITCH_TX_TO_RX_WAIT = 3;
+  const unsigned long RETRY_DELAY_INTERVAL = 50;
+  const uint8_t MAX_RETRIES = 2;
 
   // Variables
   static bool _pinDirIsSet = false;
