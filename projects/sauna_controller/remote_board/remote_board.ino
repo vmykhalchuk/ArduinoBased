@@ -71,27 +71,9 @@ void loop() {
   }
 }
 
-int i = -1;
-unsigned long timerMark = millis();
-void testLoop() {
-  if (millis() - timerMark > 20000) {
-    timerMark = millis();
-    i++;
-    powerOnRequest = false; fanOnRequest = false; heatRequest = false; fireAlarm = false;
-    if (i % 4 == 0) powerOnRequest = true;
-    else if (i % 4 == 1) fanOnRequest = true;
-    else if (i % 4 == 2) heatRequest = true;
-    else if (i % 4 == 3) fireAlarm = true;
-    RS485Client::updateFlags(powerOnRequest, fanOnRequest, heatRequest, fireAlarm);
-  }
-}
-
 uint8_t state_tempSensors = 0;
 
 void loop_tempSensors() {
-}
-
-void loop_buttons() {
 }
 
 int digitsDisplayValue_displayed = digitsDisplayValue;

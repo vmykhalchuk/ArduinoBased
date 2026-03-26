@@ -2,47 +2,56 @@
 
 namespace Tests {
 
+  void flushSerials() {
+    while (Serial.available()) Serial.read();
+  }
+
   //            sw_InfoPanel_Buzzer, sw_fan_Main, sw_fan_TRIACs, sw_Heater_TRIACs,
   //            sw_Relay1_ALARM, sw_Relay2_HEAT_FAN, sw_Relay3_POWER, sw_Relay4
   void runTests(SwitchDef buzzer, SwitchDef fanMain, SwitchDef fanTRIACs, SwitchDef heaterTRIACs,
-                SwitchDef rel1, SwitchDef rel2, SwitchDef rel3, SwitchDef rel4) {
-    for (uint8_t i = 1; i <= 5; i++) {
-      blink(buzzer, i);
-      // FIXME Make it more solid test - to check all systems working
-      switch (i) {
-        case 1:
-          delay(1000);
-          switchOn(fanMain);
-          delay(3000);
-          switchOff(fanMain);
-          break;
-        case 2:
-          delay(1000);
-          switchOn(fanTRIACs);
-          delay(3000);
-          switchOff(fanTRIACs);
-          break;
-        case 3:
-          delay(1000);
-          switchOn(heaterTRIACs);
-          delay(3000);
-          switchOff(heaterTRIACs);
-          break;
-        case 4:
-          delay(1000);
-          switchOn(rel1); switchOn(rel2);
-          delay(3000);
-          switchOff(rel1); switchOff(rel2);
-          break;
-        case 5:
-          delay(1000);
-          switchOn(rel3); switchOn(rel4);
-          delay(3000);
-          switchOff(rel3); switchOff(rel4);
-          break;
+                SwitchDef rel1, SwitchDef rel2, SwitchDef rel3, SwitchDef rel4, int pin_TestBtn) {
+    blink(buzzer, 20);
+    while (true) {
+      for (int i = 1; i <= 5; i++) {
+        flushSerials();
+        blink(buzzer, i);
+        if (digitalRead(pin_TestBtn)) return;
+        // FIXME Make it more solid test - to check all systems working
+        switch (i) {
+          case 1:
+            delay(1000);
+            switchOn(fanMain);
+            delay(3000);
+            switchOff(fanMain);
+            break;
+          case 2:
+            delay(1000);
+            switchOn(fanTRIACs);
+            delay(3000);
+            switchOff(fanTRIACs);
+            break;
+          case 3:
+            delay(1000);
+            switchOn(heaterTRIACs);
+            delay(3000);
+            switchOff(heaterTRIACs);
+            break;
+          case 4:
+            delay(1000);
+            switchOn(rel1); switchOn(rel2);
+            delay(3000);
+            switchOff(rel1); switchOff(rel2);
+            break;
+          case 5:
+            delay(1000);
+            /*switchOn(rel3);*/ switchOn(rel4);
+            delay(3000);
+            /*switchOff(rel3);*/ switchOff(rel4);
+            break;
+        }
+    
+        delay(2000);
       }
-  
-      delay(2000);
     }
   }
 
