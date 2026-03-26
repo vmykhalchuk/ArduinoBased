@@ -122,7 +122,7 @@ namespace TM1637 {
   }
 
   void updateDisplayWithError(uint8_t errorCode, uint8_t brigtness) {
-    _updateDisplay(SEGMENT_MAP_E, SEGMENT_MAP_E, SEGMENT_MAP_R, errorCode == 0x10 ? 0 : errorCode % 10, brigtness);
+    _updateDisplay(SEGMENT_MAP_E, SEGMENT_MAP_R, SEGMENT_MAP_R, errorCode == 0x10 ? 0 : errorCode % 10, brigtness);
   }
   
 }
