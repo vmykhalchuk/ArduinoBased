@@ -52,10 +52,12 @@ void loop() {
   if (btnPlusLastSaved != InputButton::isPressed(btnPlus)) {
     btnPlusLastSaved = !btnPlusLastSaved;
     if (btnPlusLastSaved) j++;
+    if (j > 83) heatRequest = false;
   }
   if (btnMinusLastSaved != InputButton::isPressed(btnMinus)) {
     btnMinusLastSaved = !btnMinusLastSaved;
     if (btnMinusLastSaved) j--;
+    if (j < 80) heatRequest = true;
   }
   if (btnPowerLastSaved != InputButton::isPressed(btnPower)) {
     btnPowerLastSaved = !btnPowerLastSaved;
@@ -80,7 +82,7 @@ int digitsDisplayValue_displayed = digitsDisplayValue;
 bool digitsDisplayShowDoubleDots_displayed = digitsDisplayShowDoubleDots;
 void loop_digitsDisplay() {
   if (digitsDisplayValue != digitsDisplayValue_displayed || digitsDisplayShowDoubleDots != digitsDisplayShowDoubleDots_displayed) {
-    TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots, false, i);
+    TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots, false, digitsDisplayValue%7);
     digitsDisplayValue_displayed = digitsDisplayValue;
     digitsDisplayShowDoubleDots_displayed = digitsDisplayShowDoubleDots;
   }
