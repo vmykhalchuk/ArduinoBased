@@ -8,8 +8,8 @@ namespace Tests {
 
   //            sw_InfoPanel_Buzzer, sw_fan_Main, sw_fan_TRIACs, sw_Heater_TRIACs,
   //            sw_Relay1_ALARM, sw_Relay2_HEAT_FAN, sw_Relay3_POWER, sw_Relay4
-  void runTests(SwitchDef buzzer, SwitchDef fanMain, SwitchDef fanTRIACs, SwitchDef heaterTRIACs,
-                SwitchDef rel1, SwitchDef rel2, SwitchDef rel3, SwitchDef rel4, int pin_TestBtn) {
+  void runTests(SwitchDef &buzzer, SwitchDef &fanMain, SwitchDef &fanTRIACs, SwitchDef &heaterTRIACs,
+                SwitchDef &rel1, SwitchDef &rel2, SwitchDef &rel3, SwitchDef &rel4, int pin_TestBtn) {
     blink(buzzer, 20);
     while (true) {
       for (int i = 1; i <= 5; i++) {
@@ -55,9 +55,9 @@ namespace Tests {
     }
   }
 
-  void testDataRefresh(SwitchDef sw_InfoPanel_Buzzer, 
-                       SwitchDef sw_Relay1_ALARM, SwitchDef sw_Relay2_HEAT_FAN,
-                       SwitchDef sw_Relay3_POWER, SwitchDef sw_Relay4) {
+  void testDataRefresh(SwitchDef &sw_InfoPanel_Buzzer, 
+                       SwitchDef &sw_Relay1_ALARM, SwitchDef &sw_Relay2_HEAT_FAN,
+                       SwitchDef &sw_Relay3_POWER, SwitchDef &sw_Relay4) {
     bool buzzWasOn = isSwitchOn(sw_InfoPanel_Buzzer);
     if (buzzWasOn) {
       delay(200);

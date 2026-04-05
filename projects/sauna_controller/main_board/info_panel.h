@@ -6,7 +6,7 @@
 
 namespace InfoPanel {
 
-  void init(SwitchDef sw_Led1, SwitchDef sw_Buzzer);
+  void init(SwitchDef &sw_Led1, SwitchDef &sw_Buzzer);
 
   void setCommunicationError();
   void clearCommunicationError();

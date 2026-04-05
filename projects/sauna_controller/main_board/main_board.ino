@@ -13,23 +13,23 @@ const int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 const int TEMP_SENS_COUNT = 5;
 const int pins_DS18B20[TEMP_SENS_COUNT] = { 4, 5, 6, 7, 8};
 
-const SwitchDef sw_fan_TRIACs = {10, IS_ACTIVE_LOW};
-const SwitchDef sw_fan_Main = {11, IS_ACTIVE_HIGH};
-const SwitchDef sw_Heater_TRIACs = {12, IS_ACTIVE_HIGH}; // activates all three TRIACs of Heater
+SwitchDef sw_fan_TRIACs = {10, IS_ACTIVE_LOW};
+SwitchDef sw_fan_Main = {11, IS_ACTIVE_HIGH};
+SwitchDef sw_Heater_TRIACs = {12, IS_ACTIVE_HIGH}; // activates all three TRIACs of Heater
 
 const int pin_TestBtn = 13; // LOW - Pressed
 
 // Main power stage (Contactor)
-const SwitchDef sw_Relay1_ALARM = {A0, IS_ACTIVE_LOW};
+SwitchDef sw_Relay1_ALARM = {A0, IS_ACTIVE_LOW};
 // Alarm (Relay1 must be off for this to work!)
-const SwitchDef sw_Relay2_HEAT_FAN = {A1, IS_ACTIVE_LOW};
+SwitchDef sw_Relay2_HEAT_FAN = {A1, IS_ACTIVE_LOW};
 // Fan output (AC 220V Heating fan)
-const SwitchDef sw_Relay3_POWER = {A2, IS_ACTIVE_LOW};
+SwitchDef sw_Relay3_POWER = {A2, IS_ACTIVE_LOW};
 // Reserved for future use
-const SwitchDef sw_Relay4 = {A3, IS_ACTIVE_LOW};
+SwitchDef sw_Relay4 = {A3, IS_ACTIVE_LOW};
 
-const SwitchDef sw_InfoPanel_Led1 = {A4, IS_ACTIVE_HIGH};
-const SwitchDef sw_InfoPanel_Buzzer = {A5, IS_ACTIVE_HIGH};
+SwitchDef sw_InfoPanel_Led1 = {A4, IS_ACTIVE_HIGH};
+SwitchDef sw_InfoPanel_Buzzer = {A5, IS_ACTIVE_HIGH};
 
 // Remote flags (data received from Remote)
 bool powerOnRequest = false;

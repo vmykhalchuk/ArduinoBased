@@ -2,15 +2,16 @@
 
 namespace InfoPanel {
 
-  static SwitchDef _sw_Led1 = SW_DEF_EMPTY, _sw_Buzzer = SW_DEF_EMPTY;
+  SwitchDef *_sw_Led1 = NULL, *_sw_Buzzer = NULL;
 
-  void init(SwitchDef sw_Led1, SwitchDef sw_Buzzer) {
-    _sw_Led1 = sw_Led1;
-    _sw_Buzzer = sw_Buzzer;
+  void init(SwitchDef &sw_Led1, SwitchDef &sw_Buzzer) {
+    _sw_Led1 = &sw_Led1;
+    _sw_Buzzer = &sw_Buzzer;
   }
 
   void setCommunicationError() {
     digitalWrite(LED_BUILTIN, HIGH);
+    switchOn(*_sw_Led1);
   }
   void clearCommunicationError() {
     digitalWrite(LED_BUILTIN, LOW);

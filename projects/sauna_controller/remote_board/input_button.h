@@ -18,9 +18,9 @@ namespace InputButton {
   };
 
   struct Def {
-    int pinNo;
-    bool isActiveHigh;
-    bool enablePoolup;
+    const int pinNo;
+    const bool isActiveHigh;
+    const bool enablePoolup;
     Internal _;
   };
 
