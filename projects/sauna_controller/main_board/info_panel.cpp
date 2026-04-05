@@ -2,7 +2,7 @@
 
 namespace InfoPanel {
 
-  SwitchDef *_sw_Led1 = NULL, *_sw_Buzzer = NULL;
+  SwitchDef *_sw_Led1 = nullptr, *_sw_Buzzer = nullptr;
 
   void init(SwitchDef &sw_Led1, SwitchDef &sw_Buzzer) {
     _sw_Led1 = &sw_Led1;

@@ -5,14 +5,18 @@
 
 namespace RS485Client {
 
+  struct OutputData {
+    bool powerOnRequest;
+    bool fanOnRequest;
+    bool heatRequest;
+    bool fireAlarm;
+  };
+
   enum Error { OK, ERROR_INIT, NON_ACK_RECEIVED, ACK_WAIT_TIMEOUT };
   Error popError();
   Error peekError();
 
-  void init(int pinDir);
-
-  void updateFlags(bool f1, bool f2, bool f3, bool f4);
-
+  void init(int pinDir, OutputData &outputData);
 
   // State Machine Loop
   enum State { IDLE, SENDING, WAIT_ACK, RETRY_DELAY };

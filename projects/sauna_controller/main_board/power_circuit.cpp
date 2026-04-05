@@ -2,7 +2,7 @@
 
 namespace PowerCircuit {
 
-  SwitchDef *_sw_Relay3_POWER = nullptr, *_sw_Heater_TRIACs = NULL;
+  SwitchDef *_sw_Relay3_POWER = nullptr, *_sw_Heater_TRIACs = nullptr;
   bool _isInitialized = false;
 
   void init(SwitchDef &sw_Relay3_POWER, SwitchDef &sw_Heater_TRIACs) {
@@ -11,7 +11,7 @@ namespace PowerCircuit {
     _isInitialized = true;
   }
 
-
+  // FIXME Move code from INO into here
   /*
   enum SystemPowerState {PS_ZERO, PS_OFF, PS_POWERING_ON_DELAY, PS_ON};
   SystemPowerState _sysPowerState = PS_ZERO;

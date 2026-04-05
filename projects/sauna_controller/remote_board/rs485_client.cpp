@@ -28,26 +28,21 @@ namespace RS485Client {
   static bool _pinDirIsSet = false;
   static int _pinDir = 0;
   
-  static bool _f1=false, _f2=false, _f3=false, _f4=false;
+  OutputData *_out;
   
   static State _currentState = IDLE;
   static unsigned long _timerMark = 0;
   static uint8_t _retryCount = 0;
 
-  void init(int pinDir) {
+  void init(int pinDir, OutputData &outputData) {
     _pinDir = pinDir;
+    _out = &outputData;
+
     _pinDirIsSet = true;
     switchToTransmit(); // to prevent Main board from receiving random noise
     pinMode(_pinDir, OUTPUT);
     delay(100); flushSerialRead();
     changeState(IDLE);
-  }
-  
-  void updateFlags(bool f1, bool f2, bool f3, bool f4) {
-    _f1 = f1;
-    _f2 = f2;
-    _f3 = f3;
-    _f4 = f4;
   }
   
   static void switchToReceive() {
@@ -66,10 +61,10 @@ namespace RS485Client {
       return;
     }
   
-    uint8_t f1 = _f1 ? 1 : 0,
-            f2 = _f2 ? 1 : 0,
-            f3 = _f3 ? 1 : 0,
-            f4 = _f4 ? 1 : 0;
+    uint8_t f1 = _out->powerOnRequest ? 1 : 0,
+            f2 = _out->fanOnRequest ? 1 : 0,
+            f3 = _out->heatRequest ? 1 : 0,
+            f4 = _out->fireAlarm ? 1 : 0;
     
     uint8_t b1 = (f1 << 7) | (f2 << 6) | (f3 << 5) | (f4 << 4) |
                  (!f1 << 3) | (!f2 << 2) | (!f3 << 1) | !f4;
@@ -89,6 +84,7 @@ namespace RS485Client {
     Serial.write(b1);
     Serial.write(b2);
     Serial.write(crc);
+    // FIXME Unblock this part of code (flush is blocking operation) (use my_serial)
     Serial.flush(); // wait till physical transfer completes
     switchToReceive();
   }

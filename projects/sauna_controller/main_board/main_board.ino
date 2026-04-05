@@ -143,11 +143,8 @@ void fullStopBecauseOfCriticalError(int blinkError) {
 }
 
 void _delay(uint16_t timeMs) {
-  uint8_t intervalMs = 50;
-  while (timeMs > 0) {
-    uint8_t delMs = timeMs % intervalMs;
-    timeMs -= delMs;
-    delay(delMs);
+  uint32_t startMs = millis();
+  while (millis() - startMs < timeMs) {
     _loopWithoutActions();
   }
 }
@@ -184,7 +181,7 @@ void loop() {
       powerSystemOff();
     }
     InfoPanel::setCommunicationError();
-    blink(sw_InfoPanel_Buzzer, 3, 50);
+    blink(sw_InfoPanel_Buzzer, 3, 50);//FIXME Move into InfoPanel::loop
     dataReceivedTimerMark = millis();
   }
 }
