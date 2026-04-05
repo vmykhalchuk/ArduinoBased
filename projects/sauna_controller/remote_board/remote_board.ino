@@ -24,7 +24,7 @@ void setup() {
   Serial.begin(38400);
   RS485Client::init(pin_RS485_dir);
   TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
-  TM1637::updateDisplayWithError();
+  TM1637::updateDisplayWithError(1);
   digitalWrite(LED_BUILTIN, HIGH);
   delay(2000);
   TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
@@ -53,11 +53,13 @@ void loop() {
     btnPlusLastSaved = !btnPlusLastSaved;
     if (btnPlusLastSaved) j++;
     if (j > 83) heatRequest = false;
+    RS485Client::updateFlags(powerOnRequest, fanOnRequest, heatRequest, fireAlarm);
   }
   if (btnMinusLastSaved != InputButton::isPressed(btnMinus)) {
     btnMinusLastSaved = !btnMinusLastSaved;
     if (btnMinusLastSaved) j--;
     if (j < 80) heatRequest = true;
+    RS485Client::updateFlags(powerOnRequest, fanOnRequest, heatRequest, fireAlarm);
   }
   if (btnPowerLastSaved != InputButton::isPressed(btnPower)) {
     btnPowerLastSaved = !btnPowerLastSaved;

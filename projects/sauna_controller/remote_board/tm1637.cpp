@@ -22,6 +22,8 @@ namespace TM1637 {
     0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f
   };
 
+  static const uint8_t SEGMENT_MAP_A = 0x01;
+  static const uint8_t SEGMENT_MAP_C = 0x01;
   static const uint8_t SEGMENT_MAP_E = 0x79;
   static const uint8_t SEGMENT_MAP_R = 0x50;
   
@@ -122,7 +124,22 @@ namespace TM1637 {
   }
 
   void updateDisplayWithError(uint8_t errorCode, uint8_t brigtness) {
-    _updateDisplay(SEGMENT_MAP_E, SEGMENT_MAP_R, SEGMENT_MAP_R, errorCode == 0x10 ? 0 : errorCode % 10, brigtness);
+    uint8_t errDigit = 0;
+    if (errorCode == 0xFF) {
+      errDigit = 0;
+    } else if (errorCode < 10) {
+      errDigit = SEGMENT_MAP[errorCode];
+    } else if (errorCode == 0x10) {
+      errDigit = SEGMENT_MAP_A;
+    } else if (errorCode == 0x11) {
+      errDigit = SEGMENT_MAP_C;
+    } else if (errorCode == 0x12) {
+      errDigit = SEGMENT_MAP_E;
+    } else if (errorCode == 0x13) {
+      errDigit = SEGMENT_MAP_R;
+    }
+    
+    _updateDisplay(SEGMENT_MAP_E, SEGMENT_MAP_R, SEGMENT_MAP_R, errDigit, brigtness);
   }
   
 }
