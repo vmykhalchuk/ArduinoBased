@@ -104,10 +104,17 @@ void powerSystemOn() {
   if (isSystemPoweredOn) return;
   if (fireAlarm) return; // for safety reasons we do not let system on!
 
-  // toggle Alarm for 3 sec to test it works!
+  if (isSwitchOn(sw_Relay3_POWER)) {
+    // FIXME log error!
+    if (isSwitchOn(sw_Heater_TRIACs)) {
+      _delay(1000);
+    }
+  }
   switchOff(sw_Relay3_POWER);
+  
+  // toggle Alarm for 3 sec to test it works!
   switchOn(sw_Relay1_ALARM);
-  delay(3000);
+  _delay(3000);
   switchOff(sw_Relay1_ALARM);
   switchOn(sw_Relay3_POWER);
 
@@ -117,6 +124,7 @@ void powerSystemOn() {
 
 void powerSystemOff() {
   switchOff(sw_Heater_TRIACs);
+  _delay(2000); // we must keep delay between TRIACs and Contactor's transitioning
   switchOff(sw_Relay3_POWER);
   //switchOff(sw_Relay1_ALARM); DO NOT SWITCH IT OFF IF ALREADY ON!!!
   switchOff(sw_Relay2_HEAT_FAN);
@@ -134,18 +142,34 @@ void fullStopBecauseOfCriticalError(int blinkError) {
   }
 }
 
-void loop() {
+void _delay(uint16_t timeMs) {
+  uint8_t intervalMs = 50;
+  while (timeMs > 0) {
+    uint8_t delMs = timeMs % intervalMs;
+    timeMs -= delMs;
+    delay(delMs);
+    _loopWithoutActions();
+  }
+}
+
+void _loopWithoutActions() {
+  InfoPanel::loop();
+  loopTempSensors();
   RS485Server::loop();
+}
+
+void loop() {
+  _loopWithoutActions();
   RS485Server::Error rs485Error = RS485Server::popError();
   if (rs485Error != RS485Server::OK) {
     InfoPanel::setCommunicationError();
     if (_isTestMode) {
       if (rs485Error == RS485Server::BAD_CRC) {
-        blink(sw_InfoPanel_Buzzer, 1, 100); delay(2000);
+        blink(sw_InfoPanel_Buzzer, 1, 100); _delay(2000);
       } else if (rs485Error == RS485Server::BAD_DATA) {
-        blink(sw_InfoPanel_Buzzer, 2, 100); delay(2000);
+        blink(sw_InfoPanel_Buzzer, 2, 100); _delay(2000);
       } else if (rs485Error == RS485Server::NOT_ENOUGH_BYTES_RECEIVED) {
-        blink(sw_InfoPanel_Buzzer, 3, 100); delay(2000);
+        blink(sw_InfoPanel_Buzzer, 3, 100); _delay(2000);
       }
     }
   }
@@ -163,9 +187,6 @@ void loop() {
     blink(sw_InfoPanel_Buzzer, 3, 50);
     dataReceivedTimerMark = millis();
   }
-  InfoPanel::loop();
-
-  loopTempSensors();
 }
 
 
@@ -181,8 +202,8 @@ void loopTempSensors() {
 }
 
 void handleTempsUpdated() {
-  bool turnTRIACsFansOff = (_temperatures[0] < 23);// && (_temperatures[1] < 23) && (_temperatures[3] < 23);
-  bool turnTRIACsFansOn = (_temperatures[0] > 25);// || (_temperatures[1] > 25) || (_temperatures[2] > 25);
+  bool turnTRIACsFansOff = (_temperatures[0] < 29);// && (_temperatures[1] < 23) && (_temperatures[3] < 23);
+  bool turnTRIACsFansOn = (_temperatures[0] > 33);// || (_temperatures[1] > 25) || (_temperatures[2] > 25);
   if (turnTRIACsFansOff) switchOff(sw_fan_TRIACs);
   if (turnTRIACsFansOn) switchOn(sw_fan_TRIACs);
 
@@ -203,7 +224,7 @@ void handleRS485DataRefreshed() {
     return;
   }
   
-  if (RS485Server::f4) fireAlarm = true; // will not reset unless full system reset!
+  if (RS485Server::f4) fireAlarm = true; // will not reset unless full system resets after power cycling!
   
   if (fireAlarm) {
     powerSystemOff();
@@ -229,7 +250,6 @@ void handleRS485DataRefreshed() {
 }
 
 void handleRS485HeatRequestFlag() {
-  //   isSystemPoweredOn,systemPowerOnTimerMark
   if (heatRequest != RS485Server::f3) {
     if (RS485Server::f3) {
       if (!isSystemPoweredOn) return; // do not let Heat On if not Powered On

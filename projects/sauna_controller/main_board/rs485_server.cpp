@@ -15,9 +15,9 @@ namespace RS485Server {
     return _errorCode;
   }
 
-  const unsigned long SWITCH_RX_TO_TX_HOLD = 3;
-  const unsigned long SWITCH_TX_TO_RX_WAIT = 3;
-  const unsigned long PACKET_TRANSMISSION_MAX_TIME_MS = 30; // !!! depends on baud rate and bytes in single transmission packet
+  const uint8_t SWITCH_RX_TO_TX_HOLD = 3;
+  const uint8_t SWITCH_TX_TO_RX_WAIT = 3;
+  const uint8_t PACKET_TRANSMISSION_MAX_TIME_MS = 30; // !!! depends on baud rate and bytes in single transmission packet
   
   bool _dataRefreshedFlag = false;
   bool f1 = false, f2 = false;
