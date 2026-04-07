@@ -22,8 +22,8 @@ namespace RS485Server {
   static bool _pinDirIsSet = false;
   static int _pinDir = 0;
 
-  bool _dataRefreshedFlag = false;
-  InputData *_in;
+  static bool _dataRefreshedFlag = false;
+  static InputData *_in;
 
   static bool _isDataReceivingStarted = false;
   static unsigned long _timerMark = 0;

@@ -19,13 +19,33 @@ namespace TM1637 {
 
   // Seven-segment patterns for 0-9
   static const uint8_t SEGMENT_MAP[] = {
-    0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f
+    0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F
   };
 
-  static const uint8_t SEGMENT_MAP_A = 0x01;
-  static const uint8_t SEGMENT_MAP_C = 0x01;
+  static const uint8_t SEGMENT_MAP_A = 0x77;
+  static const uint8_t SEGMENT_MAP_b = 0x7C;
+  static const uint8_t SEGMENT_MAP_C = 0x39;
+  static const uint8_t SEGMENT_MAP_c = 0x58;
+  static const uint8_t SEGMENT_MAP_d = 0x5E;
   static const uint8_t SEGMENT_MAP_E = 0x79;
-  static const uint8_t SEGMENT_MAP_R = 0x50;
+  static const uint8_t SEGMENT_MAP_F = 0x71;
+  static const uint8_t SEGMENT_MAP_j = 0x1E;
+  static const uint8_t SEGMENT_MAP_H = 0x76;
+  static const uint8_t SEGMENT_MAP_h = 0x74;
+  static const uint8_t SEGMENT_MAP_L = 0x0E;
+  static const uint8_t SEGMENT_MAP_n = 0x54;
+  static const uint8_t SEGMENT_MAP_o = 0x5C;
+  static const uint8_t SEGMENT_MAP_P = 0x73;
+  static const uint8_t SEGMENT_MAP_q = 0x67;
+  static const uint8_t SEGMENT_MAP_r = 0x50;
+  static const uint8_t SEGMENT_MAP_S = 0x6D;
+  static const uint8_t SEGMENT_MAP_t = 0x78;
+  static const uint8_t SEGMENT_MAP_U = 0x3E;
+  static const uint8_t SEGMENT_MAP_u = 0x1C;
+  static const uint8_t SEGMENT_MAP_y = 0x6E;
+  static const uint8_t SEGMENT_MAP_minus = 0x40;
+  static const uint8_t SEGMENT_MAP_underscore = 0x08;
+  static const uint8_t SEGMENT_MAP_degree = 0x63;
   
   static bool _isInitialized = false;
   static int _pinClk;
@@ -136,10 +156,10 @@ namespace TM1637 {
     } else if (errorCode == 0x12) {
       errDigit = SEGMENT_MAP_E;
     } else if (errorCode == 0x13) {
-      errDigit = SEGMENT_MAP_R;
+      errDigit = SEGMENT_MAP_r;
     }
     
-    _updateDisplay(SEGMENT_MAP_E, SEGMENT_MAP_R, SEGMENT_MAP_R, errDigit, brigtness);
+    _updateDisplay(SEGMENT_MAP_E, SEGMENT_MAP_r, SEGMENT_MAP_r, errDigit, brigtness);
   }
   
 }
