@@ -5,6 +5,13 @@
 
 namespace RS485Server {
 
+  struct InputData {
+    bool powerOnRequest;
+    bool fanOnRequest;
+    bool heatRequest;
+    bool fireAlarm;
+  };
+
   enum Error { OK, NOT_ENOUGH_BYTES_RECEIVED, BAD_CRC, BAD_DATA };
   Error popError();
   Error peekError();
@@ -17,9 +24,8 @@ namespace RS485Server {
   bool peekDataRefreshedFlag();
   bool popDataRefreshedFlag();
   
-  extern bool f1, f2, f3, f4;
-
-  void init(int pinDir);
+  //extern bool f1, f2, f3, f4;
+  void init(int pinDir, InputData &inputData);
   void loop();
 
   // Static is essentially private

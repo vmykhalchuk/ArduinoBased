@@ -5,6 +5,19 @@
 
 namespace DS18B20 {
 
+  struct TempSensorDef {
+    const int pinNo;
+    float temp;
+  };
+
+  struct TempSensorsStruct {
+    TempSensorDef triac1;
+    TempSensorDef triac2;
+    TempSensorDef triac3;
+    TempSensorDef internal;
+    TempSensorDef external;
+  };
+
   bool checkSensor(int dataPin);
   
   /*
@@ -17,6 +30,7 @@ namespace DS18B20 {
   bool setResolution(int dataPin, uint8_t hexValue = 0x3F, bool saveToSensorEEPROM = false);
 
   float readTemperature(int dataPin);
+  void readTemperature(TempSensorDef &tempSensor);
 }
 
 #endif

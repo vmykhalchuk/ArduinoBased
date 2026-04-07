@@ -19,12 +19,11 @@ namespace RS485Server {
   const uint8_t SWITCH_TX_TO_RX_WAIT = 3;
   const uint8_t PACKET_TRANSMISSION_MAX_TIME_MS = 30; // !!! depends on baud rate and bytes in single transmission packet
   
-  bool _dataRefreshedFlag = false;
-  bool f1 = false, f2 = false;
-  bool f3 = false, f4 = false;
-
   static bool _pinDirIsSet = false;
   static int _pinDir = 0;
+
+  bool _dataRefreshedFlag = false;
+  InputData *_in;
 
   static bool _isDataReceivingStarted = false;
   static unsigned long _timerMark = 0;
@@ -38,9 +37,11 @@ namespace RS485Server {
     return res;
   }
     
-  void init(int pinDir) {
+  void init(int pinDir, InputData &inputData) {
     _pinDir = pinDir;
     _pinDirIsSet = true;
+    _in = &inputData;
+    
     switchToReceive();
     pinMode(_pinDir, OUTPUT);
     delay(100); flushSerialRead();
@@ -70,10 +71,10 @@ namespace RS485Server {
       
       if (crcValid && dataValid) {
         responseByte = 0x66; // ACK
-        f4 = ! (b1 & 1);
-        f3 = ! ((b1 >> 1) & 1);
-        f2 = ! ((b1 >> 2) & 1);
-        f1 = ! ((b1 >> 3) & 1);
+        _in->fireAlarm = ! (b1 & 1);
+        _in->heatRequest = ! ((b1 >> 1) & 1);
+        _in->fanOnRequest = ! ((b1 >> 2) & 1);
+        _in->powerOnRequest = ! ((b1 >> 3) & 1);
         _dataRefreshedFlag = true;
         
       } else {

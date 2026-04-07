@@ -89,6 +89,10 @@ namespace DS18B20 {
     return (float)raw * 0.0625;
   }
 
+  void readTemperature(TempSensorDef &tempSensor) {
+    tempSensor.temp = readTemperature(tempSensor.pinNo);
+  }
+
 
   bool checkSensor(int dataPin) {
     return ds_reset(dataPin);

@@ -70,10 +70,10 @@ namespace Tests {
     bool rel4WasOn = isSwitchOn(sw_Relay4);
   
     switchOn(sw_InfoPanel_Buzzer);
-    switchToggleTo(sw_Relay1_ALARM, RS485Server::f1);
+    /*switchToggleTo(sw_Relay1_ALARM, RS485Server::f1);
     switchToggleTo(sw_Relay2_HEAT_FAN, RS485Server::f2);
     switchToggleTo(sw_Relay3_POWER, RS485Server::f3);
-    switchToggleTo(sw_Relay4, RS485Server::f4);
+    switchToggleTo(sw_Relay4, RS485Server::f4);*/
   
     delay(1000);
   
