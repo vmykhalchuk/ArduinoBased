@@ -2,47 +2,89 @@
 
 namespace InputButton {
 
-  void loopFor(Def &def) {
-    Internal &_ = def._;
+  void loop(Def &def) {
+    Internal &_ctx = def._ctx;
 
     unsigned long _ms = millis();
-    switch (_.smState) {
+    switch (_ctx.smState) {
       case NOT_INITIALIZED:
-        pinMode(def.pinNo, INPUT);
-        if (def.enablePoolup) digitalWrite(def.pinNo, HIGH);
-        _.btnState = digitalRead(def.pinNo);
-        _.lastStateChangedTmstmp = _ms;
-        _.timerMark = _ms;
-        _.smState = DEBOUNCE_WAITING;
+        pinMode(def.pinNo, def.enablePullup ? INPUT_PULLUP : INPUT);
+        if (def.enablePullup) digitalWrite(def.pinNo, HIGH);
+        _ctx.btnState = digitalRead(def.pinNo);
+        _ctx.lastStateChangedTmstmp = _ms;
+        _ctx.timerMark = _ms;
+        _ctx.smState = DEBOUNCE_WAITING;
       break;
       case IDLE:
-        if (digitalRead(def.pinNo) != _.btnState) {
-          _.timerMark = _ms;
-          _.smState = DEBOUNCE_WAITING;
+        if (digitalRead(def.pinNo) != _ctx.btnState) {
+          _ctx.timerMark = _ms;
+          _ctx.smState = DEBOUNCE_WAITING;
         }
       break;
       case DEBOUNCE_WAITING:
-        if (_ms - _.timerMark >= DEBOUNCE_THRESHOLD_MS) {
-          if (_.btnState != digitalRead(def.pinNo)) {
-            _.btnState = !_.btnState;
-            _.lastStateChangedTmstmp = _ms;
+        if (_ms - _ctx.timerMark >= DEBOUNCE_THRESHOLD_MS) {
+          if (_ctx.btnState != digitalRead(def.pinNo)) {
+            _ctx.btnState = !_ctx.btnState;
+            _ctx.lastStateChangedTmstmp = _ms;
+
+            if (_ctx.btnState) {
+              _ctx.wasPressed = true;
+              _ctx.wasLongPressed = false;
+            } else {
+              _ctx.wasReleased = true;
+            }
           }
-          _.smState = IDLE;
+          _ctx.smState = IDLE;
         }
+      break;
+      default:
+        _ctx.smState = ERROR;
       break;
     }
   }
 
   bool isPressed(Def &def) {
-    if (def._.btnState == def.isActiveHigh) {
+    return def._ctx.btnState == def.isActiveHigh;
+  }
+
+  bool isLongPressed(Def &def) {
+    return def._ctx.btnState == def.isActiveHigh && (millis() - def._ctx.lastStateChangedTmstmp > LONG_PRESS_DURATION_MS);
+  }
+
+  bool wasPressed(Def &def) {
+    if (def._ctx.wasPressed) {
+      def._ctx.wasPressed = false;
       return true;
-    } else {
+    }
+    return false;
+  }
+
+  bool wasLongPressed(Def &def) {
+    if (def._ctx.wasLongPressed) {
       return false;
     }
+    bool longPressDetected = isLongPressed(def);
+    if (longPressDetected) {
+      def._ctx.wasLongPressed = true;
+      return true;
+    }
+    return false;
+  }
+
+  bool wasReleased(Def &def) {
+    if (def._ctx.wasReleased) {
+      def._ctx.wasReleased = false;
+      return true;
+    }
+    return false;
+  }
+
+  bool hasStateChanged(Def &def) {
+    return wasPressed(def) || wasReleased(def);
   }
 
   bool isError(Def &def) {
-    return def._.smState == ERROR;
+    return def._ctx.smState == ERROR;
   }
 
 }

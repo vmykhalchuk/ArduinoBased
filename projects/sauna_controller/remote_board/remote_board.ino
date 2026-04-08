@@ -7,9 +7,9 @@ int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 int pin_TM1637_CLK = 4;
 int pin_TM1637_DIO = 5;
 
-InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePoolup = true };
-InputButton::Def btnMinus = { .pinNo = 7, .isActiveHigh = false, .enablePoolup = true };
-InputButton::Def btnPower = { .pinNo = 8, .isActiveHigh = false, .enablePoolup = true };
+InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePullup = true };
+InputButton::Def btnMinus = { .pinNo = 7, .isActiveHigh = false, .enablePullup = true };
+InputButton::Def btnPower = { .pinNo = 8, .isActiveHigh = false, .enablePullup = true };
 
 RS485Client::OutputData _out = {
                                         .powerOnRequest = false,
@@ -25,7 +25,7 @@ void setup() {
   Serial.begin(38400);
   RS485Client::init(pin_RS485_dir, _out);
   TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
-  TM1637::updateDisplayWithError(2);
+  TM1637::updateDisplayWithError(3);
   digitalWrite(LED_BUILTIN, HIGH);
   delay(2000);
   TM1637::updateDisplay(display_value, display_doubleDots);
@@ -43,26 +43,22 @@ void loop() {
   RS485Client::loop();
 
   switch (_c_b) { // loop only one button at a time to make RS485 loop more efficient
-    case 0: InputButton::loopFor(btnPlus); break;
-    case 1: InputButton::loopFor(btnMinus); break;
-    case 2: InputButton::loopFor(btnPower); break;
+    case 0: InputButton::loop(btnPlus); break;
+    case 1: InputButton::loop(btnMinus); break;
+    case 2: InputButton::loop(btnPower); break;
     default: _c_b = 0;
   } _c_b++; _c_b = _c_b % 3;
 
-  if (btnPlusLastState != InputButton::isPressed(btnPlus)) {
-    btnPlusLastState = !btnPlusLastState;
-    if (btnPlusLastState) j++;
-    if (j > 83) _out.heatRequest = false;
+  if (InputButton::wasPressed(btnPlus)) {
+    j++;
+    if (j > 81) _out.heatRequest = false;
   }
-  if (btnMinusLastState != InputButton::isPressed(btnMinus)) {
-    btnMinusLastState = !btnMinusLastState;
-    if (btnMinusLastState) j--;
+  if (InputButton::wasPressed(btnMinus)) {
+    j--;
     if (j < 80) _out.heatRequest = true;
   }
-  if (btnPowerLastState != InputButton::isPressed(btnPower)) {
-    btnPowerLastState = !btnPowerLastState;
-    display_doubleDots = btnPowerLastState;
-    _out.powerOnRequest = btnPowerLastState;
+  if (InputButton::hasStateChanged(btnPower)) {
+    _out.powerOnRequest = InputButton::isPressed(btnPower);
   }
 
   if (++_c_d >= 5) {
