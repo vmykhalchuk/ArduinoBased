@@ -12,7 +12,7 @@ namespace RS485Server {
     bool fireAlarm;
   };
 
-  enum Error { OK, NOT_ENOUGH_BYTES_RECEIVED, BAD_CRC, BAD_DATA };
+  enum Error { OK, NOT_INITIALIZED, NOT_ENOUGH_BYTES_RECEIVED, BAD_CRC, BAD_DATA };
   Error popError();
   Error peekError();
   

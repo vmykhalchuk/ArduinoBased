@@ -65,7 +65,7 @@ namespace DS18B20 {
   // --- High Level Temperature Conversion ---
   
   float readTemperature(int dataPin) {
-    if (!ds_reset(dataPin)) return -1000.0;
+    if (!ds_reset(dataPin)) return NO_READING;
   
     ds_write_byte(dataPin, 0xCC); // Skip ROM (only works with one sensor)
     ds_write_byte(dataPin, 0x44); // Start Conversion
@@ -75,7 +75,7 @@ namespace DS18B20 {
     // We'll just wait for it to return to high.
     while (!ds_read_bit(dataPin)); 
   
-    if (!ds_reset(dataPin)) return -1000.0;
+    if (!ds_reset(dataPin)) return NO_READING;
     ds_write_byte(dataPin, 0xCC); // Skip ROM
     ds_write_byte(dataPin, 0xBE); // Read Scratchpad
   

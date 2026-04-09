@@ -3,7 +3,7 @@
 #include "tm1637.h"
 #include "input_button.h"
 
-int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
+int pin_RS485_DIR = 2; // LOW - Listening, HIGH - Transmitting
 int pin_TM1637_CLK = 4;
 int pin_TM1637_DIO = 5;
 
@@ -12,18 +12,18 @@ InputButton::Def btnMinus = { .pinNo = 7, .isActiveHigh = false, .enablePullup =
 InputButton::Def btnPower = { .pinNo = 8, .isActiveHigh = false, .enablePullup = true };
 
 RS485Client::OutputData _out = {
-                                        .powerOnRequest = false,
-                                        .fanOnRequest = false,
-                                        .heatRequest = false,
-                                        .fireAlarm = false
-                                      };
+                                  .powerOnRequest = false,
+                                  .fanOnRequest = false,
+                                  .heatRequest = false,
+                                  .fireAlarm = false
+                               };
 unsigned int display_value = 0;
 bool display_doubleDots = false;
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(38400);
-  RS485Client::init(pin_RS485_dir, _out);
+  RS485Client::init(pin_RS485_DIR, _out);
   TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
   TM1637::updateDisplayWithError(3);
   digitalWrite(LED_BUILTIN, HIGH);
@@ -35,7 +35,7 @@ void setup() {
 bool btnPlusLastState = true;
 bool btnMinusLastState = true;
 bool btnPowerLastState = true;
-int j = 100;
+int j = 85;
 
 uint8_t _c_b = 0;
 uint8_t _c_d = 0;

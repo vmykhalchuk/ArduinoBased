@@ -7,7 +7,18 @@
 
 const int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 
-DS18B20::TempSensorsStruct tempSensors = { .triac1 = { 4, 0.0 }, .triac2 = { 5, 0.0 }, .triac3 = { 6, 0.0 }, .internal = { 7, 0.0 }, .external = { 8, 0.0 } };
+const float OVERHEAT_TEMPERATURE = 50; // When overheat occurs - emergency shutdown is executed!
+const float MAX_TRIAC_FANS_TEMPERATURE = 30;
+const float MIN_TRIAC_FANS_TEMPERATURE = 25;
+const float DELTA_TEMP = 1.5;
+
+DS18B20::TempSensorsStruct tempSensors = {
+          .triac1 = { .pinNo = 4, DS18B20::NO_READING },
+          .triac2 = { .pinNo = 5, DS18B20::NO_READING },
+          .triac3 = { .pinNo = 6, DS18B20::NO_READING },
+          .internal = { .pinNo = 7, DS18B20::NO_READING },
+          .external = { .pinNo = 8, DS18B20::NO_READING }
+        };
 const uint8_t TEMP_SENSORS_COUNT = 5;
 DS18B20::TempSensorDef* allTempSensors[TEMP_SENSORS_COUNT] = {
   &tempSensors.triac1, &tempSensors.triac2, &tempSensors.triac3,
@@ -54,11 +65,9 @@ bool _isTestMode = false;
 
 void setup() {
   Serial.begin(38400);
-  RS485Server::init(pin_RS485_dir, rs485Input);
-  InfoPanel::init(sw_InfoPanel_Led1, sw_InfoPanel_Buzzer);
   
-  initSwitch(sw_fan_TRIACs);
   initSwitch(sw_fan_Main, true);
+  initSwitch(sw_fan_TRIACs);
   initSwitch(sw_Heater_TRIACs);
 
   initSwitch(sw_Relay1_ALARM);
@@ -69,6 +78,9 @@ void setup() {
   initSwitch(sw_InfoPanel_Led1);
   initSwitch(sw_InfoPanel_Buzzer, true);
   
+  RS485Server::init(pin_RS485_dir, rs485Input);
+  InfoPanel::init(sw_InfoPanel_Led1, sw_InfoPanel_Buzzer);
+
   pinMode(pin_TestBtn, INPUT);
   delay(20);
   if (digitalRead(pin_TestBtn) == HIGH) {
@@ -120,12 +132,9 @@ void initTempSensors() {
 void powerSystemOn() {
   if (isSystemPoweredOn) return;
 
-  if (isSwitchOn(sw_Relay3_POWER)) {
-    // FIXME log error!
-    if (isSwitchOn(sw_Heater_TRIACs)) {
-      switchOff(sw_Heater_TRIACs);
-      _delay(1000);
-    }
+  if (isSwitchOn(sw_Heater_TRIACs)) {
+    switchOff(sw_Heater_TRIACs);
+    _delay(1000);
   }
   switchOff(sw_Relay3_POWER);
   
@@ -139,10 +148,12 @@ void powerSystemOn() {
   systemPowerOnTimeMark = millis();
 }
 
-void powerSystemOff() {
-  // FIXME Validate simlar to powerSystemOn (see above)
+void powerSystemOff(bool activeDelay = true) {
   switchOff(sw_Heater_TRIACs);
-  _delay(2000); // we must keep delay between TRIACs and Contactor's transitioning
+  
+  // we must keep delay between TRIACs and Contactor's transitioning
+  if (activeDelay) _delay(2000); else delay(2000);
+  
   switchOff(sw_Relay3_POWER);
   //switchOff(sw_Relay1_ALARM); DO NOT SWITCH IT OFF IF ALREADY ON!!!
   switchOff(sw_Relay2_HEAT_FAN);
@@ -152,16 +163,11 @@ void powerSystemOff() {
 }
 
 void emergencyShutdown(int blinkError, bool enableFireAlarm) {
-  // FIXME Validate simlar to powerSystemOff (see above)
-  switchOff(sw_Heater_TRIACs);
-  delay(1000); // we must keep delay between TRIACs and Contactor's transitioning
-  switchOff(sw_Relay3_POWER);
+  powerSystemOff(false);
   if (enableFireAlarm) switchOn(sw_Relay1_ALARM);
-  switchOff(sw_Relay2_HEAT_FAN);
-  switchOff(sw_Relay4);
   digitalWrite(LED_BUILTIN, HIGH);
   while (true) {
-    delay(3000);
+    delay(5000);
     blink(sw_InfoPanel_Buzzer, blinkError, 700, 300);
   }
 }
@@ -205,7 +211,7 @@ void loop() {
       powerSystemOff();
     }
     InfoPanel::setCommunicationError();
-    blink(sw_InfoPanel_Buzzer, 3, 50);//FIXME Move into InfoPanel::loop
+    blink(sw_InfoPanel_Buzzer, 3, 100);//FIXME Move into InfoPanel::loop
     dataReceivedTimeMark = millis();
   }
 }
@@ -215,7 +221,6 @@ uint32_t _tempSensorLastReadTime = 0;
 const uint16_t TEMP_SENSOR_READ_INTERVAL_MS = 1000; // ms between different sensor reads
 
 void loopTempSensors() {
-  // Use millis() for predictable timing regardless of loop speed
   if (millis() - _tempSensorLastReadTime >= TEMP_SENSOR_READ_INTERVAL_MS) {
     _tempSensorLastReadTime = millis();
     DS18B20::readTemperature(*allTempSensors[_tempSensorIdx]);
@@ -226,23 +231,26 @@ void loopTempSensors() {
 }
 
 void handleTempsUpdated() {
-  bool criticalTemp = (tempSensors.triac1.temp > 50);// || (tempSensors.triac2.temp > 50) || (tempSensors.triac3.temp > 50) || (tempSensors.internal.temp > 50);
+  bool criticalTemp = (tempSensors.triac1.temp > OVERHEAT_TEMPERATURE);// || (tempSensors.triac2.temp > OVERHEAT_TEMPERATURE) || (tempSensors.triac3.temp > OVERHEAT_TEMPERATURE) 
+                          // || (tempSensors.internal.temp > OVERHEAT_TEMPERATURE);
   if (criticalTemp) {
     switchOn(sw_fan_TRIACs);
     switchOn(sw_fan_Main);
     emergencyShutdown(3, true);
   }
 
-  float minTemp = tempSensors.external.temp < (29 - 1.5) ? 29 : tempSensors.external.temp + 1.5;
+  float delta = DELTA_TEMP;
+
+  float minTemp = tempSensors.external.temp < (MIN_TRIAC_FANS_TEMPERATURE - delta) ? MIN_TRIAC_FANS_TEMPERATURE : tempSensors.external.temp + delta;
   bool turnTRIACsFansOff = (tempSensors.triac1.temp < minTemp);// && (tempSensors.triac2.temp < minTemp) && (tempSensors.triac3.temp < minTemp);
-  float maxTemp = tempSensors.external.temp < (33 - 1.5) ? 33 : tempSensors.external.temp + 1.5;
+  float maxTemp = tempSensors.external.temp < (MAX_TRIAC_FANS_TEMPERATURE - delta) ? MAX_TRIAC_FANS_TEMPERATURE : tempSensors.external.temp + delta;
   bool turnTRIACsFansOn = (tempSensors.triac1.temp > maxTemp);// || (tempSensors.triac2.temp > maxTemp) || (tempSensors.triac3.temp > maxTemp);
   if (turnTRIACsFansOff) switchOff(sw_fan_TRIACs);
   if (turnTRIACsFansOn) switchOn(sw_fan_TRIACs);
 
   if (false) { // FIXME Enable
-  bool turnMainFanOff = (tempSensors.internal.temp < (tempSensors.external.temp + 1.5));
-  bool turnMainFanOn = (tempSensors.internal.temp > (tempSensors.external.temp + 3.2));
+  bool turnMainFanOff = (tempSensors.internal.temp < (tempSensors.external.temp + delta));
+  bool turnMainFanOn = (tempSensors.internal.temp > (tempSensors.external.temp + delta + delta));
   if (turnMainFanOff) switchOff(sw_fan_Main);
   if (turnMainFanOn) switchOn(sw_fan_Main);
   }
@@ -275,7 +283,7 @@ void handleRS485DataRefreshed() {
     switchToggleTo(sw_Relay2_HEAT_FAN, rs485Input.fanOnRequest);
   }
 
-  if (rs485Input.heatRequest) { // FIXME This runs constantly - make it run once when request changes
+  if (rs485Input.heatRequest) { // TODO This runs constantly - make it run once when request changes
     if (!isSystemPoweredOn) return; // do not let Heat On if not Powered On
     if (millis() - systemPowerOnTimeMark < 2000) return; // prevent Heat On before Contactor fully turns on!
     switchOn(sw_Heater_TRIACs);

@@ -19,7 +19,7 @@ namespace RS485Server {
   const uint8_t SWITCH_TX_TO_RX_WAIT = 3;
   const uint8_t PACKET_TRANSMISSION_MAX_TIME_MS = 30; // !!! depends on baud rate and bytes in single transmission packet
   
-  static bool _pinDirIsSet = false;
+  static bool _initialized = false;
   static int _pinDir = 0;
 
   static bool _dataRefreshedFlag = false;
@@ -39,7 +39,7 @@ namespace RS485Server {
     
   void init(int pinDir, InputData &inputData) {
     _pinDir = pinDir;
-    _pinDirIsSet = true;
+    _initialized = true;
     _in = &inputData;
     
     switchToReceive();
@@ -48,6 +48,10 @@ namespace RS485Server {
   }
 
   void loop() {
+    if (!_initialized) {
+      _errorCode = NOT_INITIALIZED;
+      return;
+    }
     if (!_isDataReceivingStarted && Serial.available()) {
       _isDataReceivingStarted = true;
       _timerMark = millis();
