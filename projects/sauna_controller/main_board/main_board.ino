@@ -111,12 +111,10 @@ void initTempSensors() {
   bool allSensorsPresent = true;
 
   allSensorsPresent &= DS18B20::setResolution(tempSensors.triac1.pinNo, 0x3F);
-  if (false) { //FIXME Enable
   allSensorsPresent &= DS18B20::setResolution(tempSensors.triac2.pinNo, 0x3F);
   allSensorsPresent &= DS18B20::setResolution(tempSensors.triac3.pinNo, 0x3F);
   allSensorsPresent &= DS18B20::setResolution(tempSensors.internal.pinNo, 0x3F);
   allSensorsPresent &= DS18B20::setResolution(tempSensors.external.pinNo, 0x3F);
-  }
   
   if (!allSensorsPresent) {
     // critical error, we cannot continue operation, some of temp sensors fails
@@ -126,12 +124,10 @@ void initTempSensors() {
 
 void readAllTemperatures() {
   DS18B20::readTemperature(tempSensors.triac1);
-  if (false) { //FIXME Enable
   DS18B20::readTemperature(tempSensors.triac2);
   DS18B20::readTemperature(tempSensors.triac3);
   DS18B20::readTemperature(tempSensors.internal);
   DS18B20::readTemperature(tempSensors.external);
-  }
 }
 
 void powerSystemOn() {
@@ -236,8 +232,8 @@ void loopTempSensors() {
 }
 
 void handleTempsUpdated() {
-  bool criticalTemp = (tempSensors.triac1.temp > OVERHEAT_TEMPERATURE);// || (tempSensors.triac2.temp > OVERHEAT_TEMPERATURE) || (tempSensors.triac3.temp > OVERHEAT_TEMPERATURE) 
-                          // || (tempSensors.internal.temp > OVERHEAT_TEMPERATURE);
+  bool criticalTemp = (tempSensors.triac1.temp > OVERHEAT_TEMPERATURE) || (tempSensors.triac2.temp > OVERHEAT_TEMPERATURE) || (tempSensors.triac3.temp > OVERHEAT_TEMPERATURE) 
+                           || (tempSensors.internal.temp > OVERHEAT_TEMPERATURE);
   if (criticalTemp) {
     switchOn(sw_fan_TRIACs);
     switchOn(sw_fan_Main);
@@ -247,18 +243,16 @@ void handleTempsUpdated() {
   float delta = DELTA_TEMP;
 
   float minTemp = tempSensors.external.temp < (MIN_TRIAC_FANS_TEMPERATURE - delta) ? MIN_TRIAC_FANS_TEMPERATURE : tempSensors.external.temp + delta;
-  bool turnTRIACsFansOff = (tempSensors.triac1.temp < minTemp);// && (tempSensors.triac2.temp < minTemp) && (tempSensors.triac3.temp < minTemp);
+  bool turnTRIACsFansOff = (tempSensors.triac1.temp < minTemp) && (tempSensors.triac2.temp < minTemp) && (tempSensors.triac3.temp < minTemp);
   float maxTemp = tempSensors.external.temp < (MAX_TRIAC_FANS_TEMPERATURE - delta) ? MAX_TRIAC_FANS_TEMPERATURE : tempSensors.external.temp + delta;
-  bool turnTRIACsFansOn = (tempSensors.triac1.temp > maxTemp);// || (tempSensors.triac2.temp > maxTemp) || (tempSensors.triac3.temp > maxTemp);
+  bool turnTRIACsFansOn = (tempSensors.triac1.temp > maxTemp) || (tempSensors.triac2.temp > maxTemp) || (tempSensors.triac3.temp > maxTemp);
   if (turnTRIACsFansOff) switchOff(sw_fan_TRIACs);
   if (turnTRIACsFansOn) switchOn(sw_fan_TRIACs);
 
-  if (false) { // FIXME Enable
   bool turnMainFanOff = (tempSensors.internal.temp < (tempSensors.external.temp + delta));
   bool turnMainFanOn = (tempSensors.internal.temp > (tempSensors.external.temp + delta + delta));
   if (turnMainFanOff) switchOff(sw_fan_Main);
   if (turnMainFanOn) switchOn(sw_fan_Main);
-  }
 }
 
 
