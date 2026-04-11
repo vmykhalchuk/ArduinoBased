@@ -92,8 +92,7 @@ void setup() {
   digitalWrite(pin_TestBtn, LOW);
   readAllTemperatures();
   readAllTemperatures();
-  uint16_t _m = millis();
-  while (_m - startMs < 3000) {};
+  while (millis() - startMs < 3000) {};
   switchOff(sw_fan_Main);
   switchOff(sw_InfoPanel_Buzzer);
 
