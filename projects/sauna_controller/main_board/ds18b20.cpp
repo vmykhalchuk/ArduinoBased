@@ -4,7 +4,7 @@ namespace DS18B20 {
 
   // --- 1-Wire Low Level Functions ---
   
-  bool ds_reset(int dataPin) {
+  static bool ds_reset(int dataPin) {
     noInterrupts();
     pinMode(dataPin, OUTPUT);
     digitalWrite(dataPin, LOW);
@@ -17,7 +17,7 @@ namespace DS18B20 {
     return presence;
   }
   
-  void ds_write_bit(int dataPin, uint8_t bit) {
+  static void ds_write_bit(int dataPin, uint8_t bit) {
     pinMode(dataPin, OUTPUT);
     digitalWrite(dataPin, LOW);
     if (bit) {
@@ -31,7 +31,7 @@ namespace DS18B20 {
     }
   }
   
-  void ds_write_byte(int dataPin, uint8_t data) {
+  static void ds_write_byte(int dataPin, uint8_t data) {
     noInterrupts();
     for (uint8_t i = 0; i < 8; i++) {
       ds_write_bit(dataPin, data & 0x01);
@@ -40,7 +40,7 @@ namespace DS18B20 {
     interrupts();
   }
   
-  uint8_t ds_read_bit(int dataPin) {
+  static uint8_t ds_read_bit(int dataPin) {
     uint8_t bit = 0;
     pinMode(dataPin, OUTPUT);
     digitalWrite(dataPin, LOW);
@@ -52,7 +52,7 @@ namespace DS18B20 {
     return bit;
   }
   
-  uint8_t ds_read_byte(int dataPin) {
+  static uint8_t ds_read_byte(int dataPin) {
     noInterrupts();
     uint8_t data = 0;
     for (uint8_t i = 0; i < 8; i++) {
@@ -73,7 +73,10 @@ namespace DS18B20 {
     // Wait for conversion (750ms for 12-bit)
     // While converting, the sensor pulls the bus low. 
     // We'll just wait for it to return to high.
-    while (!ds_read_bit(dataPin)); 
+    uint32_t start = millis();
+    while (!ds_read_bit(dataPin)) {
+      if (millis() - start > 900) return NO_READING; // Timeout
+    }
   
     if (!ds_reset(dataPin)) return NO_READING;
     ds_write_byte(dataPin, 0xCC); // Skip ROM

@@ -7,9 +7,9 @@
 
 const int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
 
-const float OVERHEAT_TEMPERATURE = 50; // When overheat occurs - emergency shutdown is executed!
-const float MAX_TRIAC_FANS_TEMPERATURE = 30;
-const float MIN_TRIAC_FANS_TEMPERATURE = 25;
+const float OVERHEAT_TEMPERATURE = 50.0; // When overheat occurs - emergency shutdown is executed!
+const float MAX_TRIAC_FANS_TEMPERATURE = 30.0;
+const float MIN_TRIAC_FANS_TEMPERATURE = 25.0;
 const float DELTA_TEMP = 1.5;
 
 DS18B20::TempSensorsStruct tempSensors = {
@@ -81,6 +81,8 @@ void setup() {
   RS485Server::init(pin_RS485_dir, rs485Input);
   InfoPanel::init(sw_InfoPanel_Led1, sw_InfoPanel_Buzzer);
 
+  initTempSensors();
+  readAllTemperatures();
   pinMode(pin_TestBtn, INPUT);
   delay(20);
   if (digitalRead(pin_TestBtn) == HIGH) {
@@ -88,6 +90,8 @@ void setup() {
   }
   digitalWrite(pin_TestBtn, LOW);
   delay(2000);
+  readAllTemperatures();
+  readAllTemperatures();
   switchOff(sw_fan_Main);
   switchOff(sw_InfoPanel_Buzzer);
 
@@ -95,8 +99,6 @@ void setup() {
      Tests::runTests(sw_InfoPanel_Buzzer, sw_fan_Main, sw_fan_TRIACs, sw_Heater_TRIACs,
                      sw_Relay1_ALARM, sw_Relay2_HEAT_FAN, sw_Relay3_POWER, sw_Relay4, pin_TestBtn);
   }
-
-  initTempSensors();
 
   pinMode(pin_TestBtn, OUTPUT);
   while (Serial.available()) Serial.read();
@@ -119,7 +121,9 @@ void initTempSensors() {
     // critical error, we cannot continue operation, some of temp sensors fails
     emergencyShutdown(1, false);
   }
+}
 
+void readAllTemperatures() {
   DS18B20::readTemperature(tempSensors.triac1);
   if (false) { //FIXME Enable
   DS18B20::readTemperature(tempSensors.triac2);

@@ -59,6 +59,7 @@ void loop() {
   }
   if (InputButton::hasStateChanged(btnPower)) {
     _out.powerOnRequest = InputButton::isPressed(btnPower);
+    display_doubleDots = _out.powerOnRequest;
   }
 
   if (++_c_d >= 5) {
