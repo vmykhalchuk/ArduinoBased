@@ -81,6 +81,7 @@ void setup() {
   RS485Server::init(pin_RS485_dir, rs485Input);
   InfoPanel::init(sw_InfoPanel_Led1, sw_InfoPanel_Buzzer);
 
+  uint16_t startMs = millis();
   initTempSensors();
   readAllTemperatures();
   pinMode(pin_TestBtn, INPUT);
@@ -89,9 +90,10 @@ void setup() {
     _isTestMode = true;
   }
   digitalWrite(pin_TestBtn, LOW);
-  delay(2000);
   readAllTemperatures();
   readAllTemperatures();
+  uint16_t _m = millis();
+  while (_m - startMs < 3000) {};
   switchOff(sw_fan_Main);
   switchOff(sw_InfoPanel_Buzzer);
 
