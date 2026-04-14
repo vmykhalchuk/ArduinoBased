@@ -1,7 +1,7 @@
 /*
  * WS2811 "No Library" Bit-Banging
  * Target: Arduino Nano (16MHz ATmega328P)
- * Pin: Digital 4 (PD4)
+ * Pin: Digital 3 (PD3)
  */
 
 #define LED_COUNT 3
