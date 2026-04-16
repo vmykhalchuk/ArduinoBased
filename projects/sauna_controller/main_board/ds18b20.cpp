@@ -87,6 +87,7 @@ namespace DS18B20 {
   
     // Combine bytes into a 16-bit signed integer
     int16_t raw = (highByte << 8) | lowByte;
+    // FIXME check if raw == 0x0550 (85C) - this is fallback temperature (sensor browned-out during conversion or is not ready yet)
     
     // Convert to Celsius: DS18B20 uses 0.0625°C per LSB
     return (float)raw * 0.0625;
