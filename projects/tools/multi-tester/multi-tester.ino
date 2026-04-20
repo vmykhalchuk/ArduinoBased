@@ -19,5 +19,6 @@ void loop() {
       KH2441EF::clearDisplayBuf();
       KH2441EF::setDisplayBuf(1,2,3,4,i%2);
     }
+    i++;
   }
 }
