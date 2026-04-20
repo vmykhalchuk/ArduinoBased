@@ -4,7 +4,7 @@
  * Pin: Digital 3 (PD3)
  */
 
-#define LED_COUNT 3
+#define LED_COUNT 10
 #define LED_PIN   3 // Port D, Pin 3
 
 // Structure to hold RGB data

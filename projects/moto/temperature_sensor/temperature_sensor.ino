@@ -85,7 +85,7 @@ void displayLoop25ms() {
  13 - 3e
  14 - 3f
  15 - 3g
- 16 - h
+ 16 - 3dt
  17 - 4a
  18 - 4b
  19 - 4c
