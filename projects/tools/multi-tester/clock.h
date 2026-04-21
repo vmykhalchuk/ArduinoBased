@@ -3,11 +3,15 @@
 
 #include <Arduino.h>
 
+namespace _ClockMillis {
+  uint32_t _millis();
+}
+
 class ClockHR {
   public:
     static uint32_t now; // Static variable shared by everyone
     static void tick() {
-      now = millis();
+      now = _ClockMillis::_millis();
     }
     static uint32_t millis() {
       tick();

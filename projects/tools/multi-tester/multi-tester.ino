@@ -16,20 +16,23 @@ void setup() {
     if (InputButton::isLongPressed(btnMain)) {
       // enter select program mode
       selectProgramMode();
+      break;
     }
   };
   mainStartMs = ClockLR::now;
 }
 
 void selectProgramMode() {
-  uint16_t startMs = ClockLR::now;
   bool isOn = false;
   uint8_t state = 0; // 0 - waiting for long press to depress
+  KH2441EF::setDisplayBuf(0, 0, 0x13, 0, false);
   while (true) {
+    Serial.print('.');
     ClockLR::tick();
     InputButton::tick(btnMain);
     KH2441EF::tick();
-    if (ClockLR::isElapsed(startMs, 500)) {
+    if (ClockLR::isElapsed(mainStartMs, 500)) {
+      mainStartMs = ClockLR::now;
       // transition screen
       KH2441EF::setDisplayBuf(0, 0, 0x13, isOn ? progNo : 0x10, false);
       isOn = !isOn;
