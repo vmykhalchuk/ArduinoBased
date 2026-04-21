@@ -3,18 +3,11 @@
 
 #include <Arduino.h>
 
-namespace _ClockMillis {
-  uint32_t _millis();
-}
-
 class ClockHR {
   public:
     static uint32_t now; // Static variable shared by everyone
-    static void tick() {
-      now = _ClockMillis::_millis();
-    }
-    static uint32_t millis() {
-      tick();
+    static uint32_t tick() {
+      now = millis();
       return now;
     }
     static bool isElapsed(uint32_t since, uint16_t intervalMs) {
@@ -22,15 +15,12 @@ class ClockHR {
     }
 };
 
+// low resolution version
 class ClockLR {
   public:
-    static uint16_t now; // low resolution version
-    static void tick() {
-      ClockHR::tick();
-      now = ClockHR::now;
-    }
-    static uint16_t millis() {
-      tick();
+    static uint16_t now;
+    static uint16_t tick() {
+      now = ClockHR::tick();
       return now;
     }
     static bool isElapsed(uint16_t since, uint16_t intervalMs) {

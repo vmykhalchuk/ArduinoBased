@@ -82,7 +82,7 @@ void setup() {
   RS485Server::init(pin_RS485_dir, rs485Input);
   InfoPanel::init(sw_InfoPanel_Led1, sw_InfoPanel_Buzzer);
 
-  uint16_t startMs = ClockLR::millis();
+  uint16_t startMs = ClockLR::tick();
   initTempSensors();
   readAllTemperatures();
   pinMode(pin_TestBtn, INPUT);
@@ -104,7 +104,7 @@ void setup() {
 
   pinMode(pin_TestBtn, OUTPUT);
   while (Serial.available()) Serial.read();
-  dataReceivedTimeMark = ClockLR::millis();
+  dataReceivedTimeMark = ClockLR::tick();
 }
 
 void initTempSensors() {
@@ -147,7 +147,7 @@ void powerSystemOn() {
   switchOn(sw_Relay3_POWER);
 
   isSystemPoweredOn = true;
-  systemPowerOnTimeMark = ClockHR::millis();
+  systemPowerOnTimeMark = ClockHR::tick();
 }
 
 void powerSystemOff(bool activeDelay = true) {
@@ -175,7 +175,7 @@ void emergencyShutdown(int blinkError, bool enableFireAlarm) {
 }
 
 void _delay(uint16_t timeMs) {
-  uint16_t startMs = ClockLR::millis();
+  uint16_t startMs = ClockLR::tick();
   while (!ClockLR::isElapsed(startMs, timeMs)) {
     _loopWithoutActions();
   }
@@ -215,7 +215,7 @@ void loop() {
     }
     InfoPanel::setCommunicationError();
     blink(sw_InfoPanel_Buzzer, 3, 100);//FIXME Move into InfoPanel::loop
-    dataReceivedTimeMark = ClockLR::millis();
+    dataReceivedTimeMark = ClockLR::tick();
   }
 }
 
