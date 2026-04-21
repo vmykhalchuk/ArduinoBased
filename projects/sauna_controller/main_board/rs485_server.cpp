@@ -14,10 +14,6 @@ namespace RS485Server {
   Error peekError() {
     return _errorCode;
   }
-
-  const uint8_t SWITCH_RX_TO_TX_HOLD = 3;
-  const uint8_t SWITCH_TX_TO_RX_WAIT = 3;
-  const uint8_t PACKET_TRANSMISSION_MAX_TIME_MS = 30; // !!! depends on baud rate and bytes in single transmission packet
   
   static bool _initialized = false;
   static int _pinDir = 0;
@@ -47,14 +43,14 @@ namespace RS485Server {
     delay(100); flushSerialRead();
   }
 
-  void loop() {
+  void tick() {
     if (!_initialized) {
       _errorCode = NOT_INITIALIZED;
       return;
     }
     if (!_isDataReceivingStarted && Serial.available()) {
       _isDataReceivingStarted = true;
-      _timerMark = millis();
+      _timerMark = ClockLR::now;
     }
     
     if (Serial.available() >= 3) {
@@ -98,7 +94,7 @@ namespace RS485Server {
       switchToReceive();
     }
 
-    if (_isDataReceivingStarted && (millis() - _timerMark >= PACKET_TRANSMISSION_MAX_TIME_MS)) {
+    if (_isDataReceivingStarted && ClockLR::isElapsed(_timerMark, PACKET_TRANSMISSION_MAX_TIME_MS)) {
       // error situation, ignore received data
       _errorCode = NOT_ENOUGH_BYTES_RECEIVED;
       flushSerialRead();

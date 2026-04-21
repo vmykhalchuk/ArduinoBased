@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "clock.h"
 #include "rs485_client.h"
 #include "tm1637.h"
 #include "input_button.h"
@@ -40,12 +41,13 @@ int j = 85;
 uint8_t _c_b = 0;
 uint8_t _c_d = 0;
 void loop() {
-  RS485Client::loop();
+  ClockLR::tick();
+  RS485Client::tick();
 
-  switch (_c_b) { // loop only one button at a time to make RS485 loop more efficient
-    case 0: InputButton::loop(btnPlus); break;
-    case 1: InputButton::loop(btnMinus); break;
-    case 2: InputButton::loop(btnPower); break;
+  switch (_c_b) { // tick only one button at a time to make RS485 handling more smooth
+    case 0: InputButton::tick(btnPlus); break;
+    case 1: InputButton::tick(btnMinus); break;
+    case 2: InputButton::tick(btnPower); break;
     default: _c_b = 0;
   } _c_b++; _c_b = _c_b % 3;
 
@@ -64,19 +66,20 @@ void loop() {
 
   if (++_c_d >= 5) {
     display_value = j;
-    loop_display();
+    tick_display();
     _c_d = 0;
   }
 }
 
 uint8_t state_tempSensors = 0;
 
-void loop_tempSensors() {
+void tick_tempSensors() {
+  // FIXME Implement it!
 }
 
 int _display_value_displayed = display_value;
 bool _display_doubleDots_displayed = display_doubleDots;
-void loop_display() {
+void tick_display() {
   if (display_value != _display_value_displayed || display_doubleDots != _display_doubleDots_displayed) {
     TM1637::updateDisplay(display_value, display_doubleDots);
     _display_value_displayed = display_value;

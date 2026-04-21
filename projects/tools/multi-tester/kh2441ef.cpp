@@ -7,9 +7,9 @@ namespace KH2441EF {
   uint16_t startMs = 0;
   uint8_t waitTill = 0;
 
-  void displayLoopAsync(uint16_t _m) {
+  void displayLoopAsync() {
     if (state == 0) {
-      startMs = _m;
+      startMs = ClockLR::now;
       state++;
     }
     
@@ -19,7 +19,7 @@ namespace KH2441EF {
       state += 10;
 
     } else if (state > 10) { // 11..16
-      if (_m - startMs >= waitTill) {
+      if (ClockLR::isElapsed(startMs, waitTill)) {
         state -= 10;
         state++;
         if (state == 7) state = 0;
@@ -28,10 +28,10 @@ namespace KH2441EF {
   }
 
   void displayLoop24ms() {
-    uint16_t startMs = millis();
+    uint16_t startMs = ClockLR::now;
     for (int i = 1; i <= 6; i++) {
       displayUpdateForBatch(i);
-      while (millis() - startMs < i*4) {};
+      while (!ClockLR::isElapsed(startMs, i*4)) {};
     }
   }
   
@@ -332,5 +332,10 @@ namespace KH2441EF {
     } else if (digitNo == 4) {
       displayBuf[2] = displayBuf[2] | seg << 1;
     }
+  }
+
+  void muteDisplayInstantly() {
+    clearDisplayBuf();
+    clearDAll();
   }
 }

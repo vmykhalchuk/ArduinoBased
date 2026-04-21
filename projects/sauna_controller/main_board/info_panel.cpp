@@ -20,8 +20,8 @@ namespace InfoPanel {
   void setWarningCode(uint8_t f) {}
   void clearWarningCode(uint8_t f) {}
 
-  void loop() {
-    
+  void tick() {
+    // FIXME Implement
   }
   
 }

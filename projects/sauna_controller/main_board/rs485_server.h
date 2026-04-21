@@ -2,8 +2,13 @@
 #define RS485_SERVER_H
 
 #include <Arduino.h>
+#include "clock.h"
 
 namespace RS485Server {
+
+  const uint8_t SWITCH_RX_TO_TX_HOLD = 3;
+  const uint8_t SWITCH_TX_TO_RX_WAIT = 3;
+  const uint8_t PACKET_TRANSMISSION_MAX_TIME_MS = 30; // !!! depends on baud rate and bytes in single transmission packet
 
   struct InputData {
     bool powerOnRequest;
@@ -25,7 +30,7 @@ namespace RS485Server {
   bool popDataRefreshedFlag();
   
   void init(int pinDir, InputData &inputData);
-  void loop();
+  void tick();
 
   // Static is essentially private
 

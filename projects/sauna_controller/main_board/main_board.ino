@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "clock.h"
 #include "switch_pin.h"
 #include "rs485_server.h"
 #include "info_panel.h"
@@ -58,8 +59,8 @@ RS485Server::InputData rs485InputStored = {
                                       };
 
 bool isSystemPoweredOn = false;
-unsigned long systemPowerOnTimeMark = 0;
-unsigned long dataReceivedTimeMark = 0;
+uint32_t systemPowerOnTimeMark = 0;
+uint16_t dataReceivedTimeMark = 0;
 
 bool _isTestMode = false;
 
@@ -81,7 +82,7 @@ void setup() {
   RS485Server::init(pin_RS485_dir, rs485Input);
   InfoPanel::init(sw_InfoPanel_Led1, sw_InfoPanel_Buzzer);
 
-  uint16_t startMs = millis();
+  uint16_t startMs = ClockLR::millis();
   initTempSensors();
   readAllTemperatures();
   pinMode(pin_TestBtn, INPUT);
@@ -92,7 +93,7 @@ void setup() {
   digitalWrite(pin_TestBtn, LOW);
   readAllTemperatures();
   readAllTemperatures();
-  while (millis() - startMs < 3000) {};
+  while (!ClockLR::isElapsed(startMs, 3000)) {};
   switchOff(sw_fan_Main);
   switchOff(sw_InfoPanel_Buzzer);
 
@@ -103,7 +104,7 @@ void setup() {
 
   pinMode(pin_TestBtn, OUTPUT);
   while (Serial.available()) Serial.read();
-  dataReceivedTimeMark = millis();
+  dataReceivedTimeMark = ClockLR::millis();
 }
 
 void initTempSensors() {
@@ -146,7 +147,7 @@ void powerSystemOn() {
   switchOn(sw_Relay3_POWER);
 
   isSystemPoweredOn = true;
-  systemPowerOnTimeMark = millis();
+  systemPowerOnTimeMark = ClockHR::millis();
 }
 
 void powerSystemOff(bool activeDelay = true) {
@@ -174,16 +175,17 @@ void emergencyShutdown(int blinkError, bool enableFireAlarm) {
 }
 
 void _delay(uint16_t timeMs) {
-  uint32_t startMs = millis();
-  while (millis() - startMs < timeMs) {
+  uint16_t startMs = ClockLR::millis();
+  while (!ClockLR::isElapsed(startMs, timeMs)) {
     _loopWithoutActions();
   }
 }
 
 void _loopWithoutActions() {
-  InfoPanel::loop();
-  loopTempSensors();
-  RS485Server::loop();
+  ClockLR::tick();
+  InfoPanel::tick();
+  tickTempSensors();
+  RS485Server::tick();
 }
 
 void loop() {
@@ -206,14 +208,14 @@ void loop() {
     handleRS485DataRefreshed();
   }
 
-  if ((millis() - dataReceivedTimeMark) > 10000) {
+  if (ClockLR::isElapsed(dataReceivedTimeMark, 10000)) {
     if (isSystemPoweredOn) {
       // remote board is unavailable while System Power is ON - we must turn it OFF for safety!!!
       powerSystemOff();
     }
     InfoPanel::setCommunicationError();
     blink(sw_InfoPanel_Buzzer, 3, 100);//FIXME Move into InfoPanel::loop
-    dataReceivedTimeMark = millis();
+    dataReceivedTimeMark = ClockLR::millis();
   }
 }
 
@@ -221,9 +223,9 @@ uint8_t _tempSensorIdx = 0;
 uint32_t _tempSensorLastReadTime = 0;
 const uint16_t TEMP_SENSOR_READ_INTERVAL_MS = 1000; // ms between different sensor reads
 
-void loopTempSensors() {
-  if (millis() - _tempSensorLastReadTime >= TEMP_SENSOR_READ_INTERVAL_MS) {
-    _tempSensorLastReadTime = millis();
+void tickTempSensors() {
+  if (ClockLR::isElapsed(_tempSensorLastReadTime, TEMP_SENSOR_READ_INTERVAL_MS)) {
+    _tempSensorLastReadTime = ClockLR::now;
     DS18B20::readTemperature(*allTempSensors[_tempSensorIdx]);
     handleTempsUpdated();
     _tempSensorIdx++;
@@ -257,7 +259,7 @@ void handleTempsUpdated() {
 
 
 void handleRS485DataRefreshed() {
-  dataReceivedTimeMark = millis();
+  dataReceivedTimeMark = ClockLR::now;
 
   if (false) {
     Tests::testDataRefresh(sw_InfoPanel_Buzzer, sw_Relay1_ALARM, sw_Relay2_HEAT_FAN, sw_Relay3_POWER, sw_Relay4);
@@ -284,7 +286,7 @@ void handleRS485DataRefreshed() {
 
   if (rs485Input.heatRequest) { // TODO This runs constantly - make it run once when request changes
     if (!isSystemPoweredOn) return; // do not let Heat On if not Powered On
-    if (millis() - systemPowerOnTimeMark < 2000) return; // prevent Heat On before Contactor fully turns on!
+    if (!ClockHR::isElapsed(systemPowerOnTimeMark, 2000)) return; // prevent Heat On before Contactor fully turns on!
     switchOn(sw_Heater_TRIACs);
   } else {
     switchOff(sw_Heater_TRIACs);

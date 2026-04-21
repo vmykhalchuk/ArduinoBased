@@ -1,17 +1,22 @@
 #include <Arduino.h>
+#include "clock.h"
+#include "input_button.h"
 #include "kh2441ef.h"
+
+InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true };
 
 uint16_t tickStartMs;
 void setup() {
-  tickStartMs = millis();
+  tickStartMs = ClockLR::now;
 }
 
 uint8_t i = 0;
 void loop() {
-  uint16_t _m = millis();
-  KH2441EF::displayLoopAsync(_m);
-  if (_m - tickStartMs > 1000) {
-    tickStartMs = _m;
+  ClockLR::tick();
+  InputButton::tick(btnMain);
+  KH2441EF::displayLoopAsync();
+  if (ClockLR::isElapsed(tickStartMs, 1000)) {
+    tickStartMs = ClockLR::now;
     if (i < 10) {
       if (i%2 == 0) KH2441EF::setDisplayBufToErrorMsg();
       else KH2441EF::clearDisplayBuf();

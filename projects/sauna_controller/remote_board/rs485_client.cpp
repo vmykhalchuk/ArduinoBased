@@ -16,14 +16,6 @@ namespace RS485Client {
     return _errorCode;
   }
 
-  // Configuration
-  const unsigned long HEARTBEAT_INTERVAL = 2000;
-  const unsigned long ACK_TIMEOUT = 100;
-  const unsigned long SWITCH_RX_TO_TX_HOLD = 3;
-  const unsigned long SWITCH_TX_TO_RX_WAIT = 3;
-  const unsigned long RETRY_DELAY_INTERVAL = 50;
-  const uint8_t MAX_RETRIES = 2;
-
   // Variables
   static bool _pinDirIsSet = false;
   static int _pinDir = 0;
@@ -97,17 +89,17 @@ namespace RS485Client {
 
   static void changeState(State newState) {
     _currentState = newState;
-    _timerMark = millis();
+    _timerMark = ClockLR::now;
   }
   
-  void loop() {
+  void tick() {
     switch(_currentState) {
       case IDLE:
         if (Serial.available() > 0) {
           flushSerialRead();
           changeState(IDLE); // restart timer because of some noise on line
         } else {
-          if (millis() - _timerMark >= HEARTBEAT_INTERVAL) {
+          if (ClockLR::isElapsed(_timerMark, HEARTBEAT_INTERVAL)) {
             sendPacket();
             _retryCount = 0;
             changeState(WAIT_ACK);
@@ -124,7 +116,7 @@ namespace RS485Client {
             _errorCode = NON_ACK_RECEIVED;
             changeState(RETRY_DELAY);
           }
-        } else if (millis() - _timerMark >= ACK_TIMEOUT) {
+        } else if (ClockLR::isElapsed(_timerMark, ACK_TIMEOUT)) {
           _errorCode = ACK_WAIT_TIMEOUT;
           if (_retryCount < MAX_RETRIES) {
             _retryCount++;
@@ -140,7 +132,7 @@ namespace RS485Client {
   
       case RETRY_DELAY:
         flushSerialRead();
-        if (millis() - _timerMark >= RETRY_DELAY_INTERVAL) {
+        if (ClockLR::isElapsed(_timerMark, RETRY_DELAY_INTERVAL)) {
           sendPacket();
           changeState(WAIT_ACK);
         }
