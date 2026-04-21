@@ -8,7 +8,7 @@
 // // define
 // InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePullup = true };
 // // loop
-// InputButton::loop(btnPlus);
+// InputButton::tick(btnPlus);
 // // check
 // if (InputButton::wasPressed(btnPlus)) <action here>;
 namespace InputButton {

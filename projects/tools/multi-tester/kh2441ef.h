@@ -7,10 +7,13 @@
 // Display input->Arduino port: 1->D5;2->D6;3->D7;4->B0;5->B1;6->B2
 namespace KH2441EF {
 
-  void displayLoopAsync();
-  void displayLoop24ms();
+  // use either tick() or displayLoop24ms()
+  void tick(); // non-blocking
+  
+  void displayLoop24ms(); // blocking for 24ms
   void displayUpdateForBatch(uint8_t i); // TODO make it private
 
+  void setDisplayBufToInt(uint16_t i);
   void setDisplayBufToFloatWithOneDecimal(float f);
   void setDisplayBuf(uint8_t dig1, uint8_t dig2, uint8_t dig3, uint8_t dig4, bool point);
   void setDisplayBufToErrorMsg();

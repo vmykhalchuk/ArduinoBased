@@ -50,7 +50,7 @@ namespace InputButton {
 
   bool isLongPressed(Def &def) {
     Internal &_ctx = def._ctx;
-    return _ctx.btnState == def.isActiveHigh && 
+    return _ctx.btnState == def.isActiveHigh &&
                               ClockLR::isElapsed(_ctx.lastStateChangedTmstmp, LONG_PRESS_DURATION_MS);
   }
 
@@ -66,7 +66,8 @@ namespace InputButton {
   bool wasLongPressed(Def &def) {
     Internal &_ctx = def._ctx;
     if (_ctx.wasLongPressed) {
-      return false;
+      _ctx.wasLongPressed = false;
+      return true;
     }
     bool longPressDetected = isLongPressed(def);// FIXME Wouldn't work: it counts since last state changed - aka when button released not when first pressed!
     if (longPressDetected) {

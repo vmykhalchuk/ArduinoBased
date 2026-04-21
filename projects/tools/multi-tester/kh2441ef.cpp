@@ -5,9 +5,9 @@ namespace KH2441EF {
   uint8_t displayBuf[] = {0,0,0};
   uint8_t state = 1;
   uint16_t startMs = 0;
-  uint8_t waitTill = 0;
+  uint8_t waitForMs = 0;
 
-  void displayLoopAsync() {
+  void tick() {
     if (state == 0) {
       startMs = ClockLR::now;
       state++;
@@ -15,11 +15,11 @@ namespace KH2441EF {
     
     if (state < 10) { // 1..6
       displayUpdateForBatch(state);
-      waitTill = state * 4;
+      waitForMs = state * 4;
       state += 10;
 
     } else if (state > 10) { // 11..16
-      if (ClockLR::isElapsed(startMs, waitTill)) {
+      if (ClockLR::isElapsed(startMs, waitForMs)) {
         state -= 10;
         state++;
         if (state == 7) state = 0;
@@ -225,12 +225,28 @@ namespace KH2441EF {
       PORTB = PORTB & B11111011;
     }
   }
+
+  void setDisplayBufToInt(uint16_t i) {
+    if (i >= 2000) {
+      setDisplayBufToErrorMsg();
+      return;
+    }
+    uint8_t d1000 = i / 1000 % 10;
+    uint8_t d100 =  i / 100 % 10;
+    uint8_t d10 =  i / 10 % 10;
+    uint8_t d1 =  i / 1 % 10;
+    d1000 = d1000 == 0 ? 0x10 : 1;
+    d100  = d1000 == 0 && d100 == 0 ? 0x10 : d100;
+    d10   = d1000 == 0 && d100 == 0 && d10 == 0 ? 0x10 : d10;
+    setDisplayBuf(d1000,d100,d10,d1,false);
+  }
   
   void setDisplayBufToFloatWithOneDecimal(float f) {
-    int d100 = (int)(f / 100) % 10;
-    int d10 = (int)(f / 10) % 10;
-    int d1 = (int)f % 10;
-    int d0 = (int)(f * 10) % 10;
+    f = f < 0 ? -f : f;
+    uint8_t d100 = (uint8_t)(f / 100) % 10;
+    uint8_t d10 = (uint8_t)(f / 10) % 10;
+    uint8_t d1 = (uint8_t)f % 10;
+    uint8_t d0 = (uint8_t)(f * 10) % 10;
     if (d100 < 2) {
       setDisplayBuf(d100,d10,d1,d0,true);
     } else {
@@ -316,10 +332,12 @@ namespace KH2441EF {
 
     } else if (v == 0x10) { // <none> ()
       seg = 0;
-    } else if (v == 0x11) { // E (adefg)
+    } else if (v == 0x11) { // E (0gfed--a)
       seg = B01111001;
-    } else if (v == 0x12) { // r (eg)
+    } else if (v == 0x12) { // r (0g-e----)
       seg = B01010000;
+    } else if (v == 0x13) { // P (0gfe--ba)
+      seg = B01110011;
     }
 
     if (digitNo == 1) {
