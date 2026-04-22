@@ -27,6 +27,7 @@ class ClockLR {
       return now - since >= intervalMs;
     }
     // `lowerIntervalMs` must be << `intervalMs` and the bigger the gap - the better - less time wasted to update `since`
+    //   NOTE: `lowerIntervalMs` must be way above you longest interval to not trigger accidentaly some useful action
     static void preventTimerOverrun(uint16_t &since, uint16_t intervalMs, uint16_t lowerIntervalMs) {
       if (isElapsed(since, intervalMs)) {
         since = now - lowerIntervalMs;

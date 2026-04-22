@@ -28,9 +28,9 @@ namespace InputButton {
             _ctx.btnState = !_ctx.btnState;
             _ctx.lastStateChangedTmstmp = ClockLR::now;
 
-            if (_ctx.btnState) {
+            if (isPressed(def)) {
               _ctx.wasPressed = true;
-              _ctx.wasLongPressed = false;
+              //_ctx.wasLongPressed = false;
             } else {
               _ctx.wasReleased = true;
             }
@@ -49,9 +49,7 @@ namespace InputButton {
   }
 
   bool isLongPressed(Def &def) {
-    Internal &_ctx = def._ctx;
-    return _ctx.btnState == def.isActiveHigh &&
-                              ClockLR::isElapsed(_ctx.lastStateChangedTmstmp, LONG_PRESS_DURATION_MS);
+    return isPressed(def) && ClockLR::isElapsed(def._ctx.lastStateChangedTmstmp, LONG_PRESS_DURATION_MS);
   }
 
   bool wasPressed(Def &def) {
@@ -84,10 +82,6 @@ namespace InputButton {
       return true;
     }
     return false;
-  }
-
-  bool hasStateChanged(Def &def) {
-    return wasPressed(def) || wasReleased(def);
   }
 
   bool isError(Def &def) {

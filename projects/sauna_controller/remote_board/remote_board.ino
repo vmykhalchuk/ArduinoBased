@@ -59,9 +59,11 @@ void loop() {
     j--;
     if (j < 80) _out.heatRequest = true;
   }
-  if (InputButton::hasStateChanged(btnPower)) {
-    _out.powerOnRequest = InputButton::isPressed(btnPower);
-    display_doubleDots = _out.powerOnRequest;
+  if (InputButton::wasPressed(btnPower)) {
+    display_doubleDots = _out.powerOnRequest = true;
+  }
+  if (InputButton::wasReleased(btnPower)) {
+    display_doubleDots = _out.powerOnRequest = false;
   }
 
   if (++_c_d >= 5) {

@@ -49,8 +49,6 @@ namespace InputButton {
   bool wasLongPressed(Def &def);
   bool wasReleased(Def &def);
 
-  bool hasStateChanged(Def &def);
-
   //FIXME Implement. Add lastPressedTmstmp into Internal. Add lastPressedLengthMs - to track if last pressed was short or long (If first was a long press - then no double click)
   //bool isDoubleClicked();
 
