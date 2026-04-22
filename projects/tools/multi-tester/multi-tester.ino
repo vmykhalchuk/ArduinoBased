@@ -12,11 +12,10 @@ int tempSensorDS18B20Pin = 4;
 
 
 uint8_t progNo = 0;
-uint16_t mainStartMs;
 
 void setup() {
-  mainStartMs = ClockLR::now;
-  while (!ClockLR::isElapsed(mainStartMs, InputButton::LONG_PRESS_DURATION_MS << 1)) {
+  uint16_t setupTimerMs = ClockLR::tick();
+  while (!ClockLR::isElapsed(setupTimerMs, InputButton::LONG_PRESS_DURATION_MS << 1)) {
     ClockLR::tick();
     InputButton::tick(btnMain);
     if (InputButton::isLongPressed(btnMain)) {
@@ -27,7 +26,6 @@ void setup() {
   };
   
   HTU21D::setup();
-  mainStartMs = ClockLR::now;
 }
 
 enum SelProgState { NOT_INTLZD, IDLE, WAITING_4DOUBLE_CLICK, WAITING_4EXIT };
@@ -35,12 +33,13 @@ void selectProgramMode() {
   bool isOn = false;
   SelProgState state = NOT_INTLZD;
   KH2441EF::setDisplayBuf(0, 0, 0x13, 0, false);
+  uint16_t doubleClickStartMs, displayBlinkStartMs = ClockLR::tick();
   while (true) {
     ClockLR::tick();
     InputButton::tick(btnMain);
     KH2441EF::tick();
-    if (ClockLR::isElapsed(mainStartMs, 500)) {
-      mainStartMs = ClockLR::now;
+    if (ClockLR::isElapsed(displayBlinkStartMs, 500)) {
+      displayBlinkStartMs = ClockLR::now;
       // update screen
       updateDisplayWithProgNo(isOn);
       isOn = !isOn;
@@ -56,7 +55,7 @@ void selectProgramMode() {
       break;
       case IDLE:
         if (InputButton::wasReleased(btnMain)) {
-          mainStartMs = ClockLR::now;
+          doubleClickStartMs = ClockLR::now;
           state = WAITING_4DOUBLE_CLICK;
         }
         if (InputButton::isLongPressed(btnMain)) {
@@ -70,7 +69,7 @@ void selectProgramMode() {
           updateDisplayWithProgNo(isOn);
           state = IDLE;
         }
-        if (ClockLR::isElapsed(mainStartMs, 1000)) {
+        if (ClockLR::isElapsed(doubleClickStartMs, 600)) {
           // No DoubleClick
           incrementProgNo(false);
           updateDisplayWithProgNo(isOn);
@@ -119,7 +118,9 @@ void incrementProgNo(bool doubleClick) {
 uint8_t i = 0;
 uint8_t progsData[] = {0,0};
 bool _firstRun = true;
+uint16_t progTimerMs;
 void loop() {
+  if (_firstRun) progTimerMs = ClockLR::tick();
   ClockLR::tick();
   InputButton::tick(btnMain);
   KH2441EF::tick();
@@ -134,36 +135,22 @@ void loop() {
   if (_firstRun) _firstRun = false;
 }
 
-void tickProgTT() {
-  if (ClockLR::isElapsed(mainStartMs, 1000)) {
-    mainStartMs = ClockLR::now;
-    if (i < 10) {
-      if (i%2 == 0) KH2441EF::setDisplayBufToErrorMsg();
-      else KH2441EF::clearDisplayBuf();
-    } else {
-      KH2441EF::clearDisplayBuf();
-      KH2441EF::setDisplayBuf(1,2,3,4,i%2);
-    }
-    i++;
-  }
-}
-
 void tickProg00(uint8_t &pd0, uint8_t &wasBtnPressed) {
   bool forceDataRead = false;
   if (_firstRun || InputButton::wasPressed(btnMain)) {
     wasBtnPressed = true;
-    mainStartMs = ClockLR::now;
+    progTimerMs = ClockLR::now;
     KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_t, KH2441EF::S_UND, KH2441EF::S_C, false);
   }
-  if (wasBtnPressed && ClockLR::isElapsed(mainStartMs, 600)) {
+  if (wasBtnPressed && ClockLR::isElapsed(progTimerMs, 600)) {
     wasBtnPressed = false;
     forceDataRead = true;
   }
-  if (forceDataRead || ClockLR::isElapsed(mainStartMs, 10000)) {
+  if (forceDataRead || ClockLR::isElapsed(progTimerMs, 10000)) {
     KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while Temp measurements take place
     float t = DS18B20::readTemperature(tempSensorDS18B20Pin);
     KH2441EF::setDisplayBufToFloatWithOneDecimal(t);
-    mainStartMs = ClockLR::tick();
+    progTimerMs = ClockLR::tick();
   }
 }
 
@@ -172,18 +159,18 @@ void tickProg01(uint8_t &pd0Mode, uint8_t &wasBtnPressed) {
   if (_firstRun || InputButton::wasPressed(btnMain)) {
     wasBtnPressed = true;
     pd0Mode = pd0Mode == 0 ? 1 : 0;
-    mainStartMs = ClockLR::now;
+    progTimerMs = ClockLR::now;
     if (pd0Mode == 0) {
       KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_t, KH2441EF::S_UND, KH2441EF::S_C, false);
     } else {
       KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_BLANK, KH2441EF::S_r, KH2441EF::S_h, false);
     }
   }
-  if (wasBtnPressed && ClockLR::isElapsed(mainStartMs, 600)) {
+  if (wasBtnPressed && ClockLR::isElapsed(progTimerMs, 600)) {
     wasBtnPressed = false;
     forceDataRead = true;
   }
-  if (forceDataRead || ClockLR::isElapsed(mainStartMs, 10000)) {
+  if (forceDataRead || ClockLR::isElapsed(progTimerMs, 10000)) {
     KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while Temp measurements take place
     float d;
     if (pd0Mode == 0) {
@@ -203,15 +190,15 @@ void tickProg01(uint8_t &pd0Mode, uint8_t &wasBtnPressed) {
     } else {
       KH2441EF::setDisplayBufToFloatWithOneDecimal(d);
     }
-    mainStartMs = ClockLR::tick();
+    progTimerMs = ClockLR::tick();
   }
 }
 
 void tickProg03(uint8_t &pd0, uint8_t &pd1) {
-  if (ClockLR::isElapsed(mainStartMs, 1000)) {
+  if (ClockLR::isElapsed(progTimerMs, 1000)) {
     KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while ADC conversion happens
     uint16_t v = AdcProtected::protectedAnalogRead(A0);
     KH2441EF::setDisplayBufToInt(v);
-    mainStartMs = ClockLR::tick();
+    progTimerMs = ClockLR::tick();
   }
 }
