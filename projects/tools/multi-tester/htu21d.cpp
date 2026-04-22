@@ -15,7 +15,7 @@ namespace HTU21D {
 
   // 0 - temp; 1 - hum
   uint16_t readRawValue(uint8_t type) {
-    conversionError = 0;
+    conversionError = OK;
     Wire.beginTransmission(HTU21D_ADDR);
     Wire.write(type == 0 ? TRIGGER_TEMP_MEASURE_HOLD : TRIGGER_HUMD_MEASURE_HOLD);
     Wire.endTransmission();

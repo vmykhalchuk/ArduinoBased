@@ -6,7 +6,7 @@
 
 namespace DS18B20 {
 
-  const float NO_READING = -100.0;
+  const float NO_READING = -99.0;
 
   struct TempSensorDef {
     const int pinNo;
