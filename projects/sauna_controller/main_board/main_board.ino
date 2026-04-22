@@ -13,7 +13,15 @@ const float MAX_TRIAC_FANS_TEMPERATURE = 30.0;
 const float MIN_TRIAC_FANS_TEMPERATURE = 25.0;
 const float DELTA_TEMP = 1.5;
 
-DS18B20::TempSensorsStruct tempSensors = {
+struct TempSensorsStruct {
+  DS18B20::TempSensorDef triac1;
+  DS18B20::TempSensorDef triac2;
+  DS18B20::TempSensorDef triac3;
+  DS18B20::TempSensorDef internal;
+  DS18B20::TempSensorDef external;
+};
+
+TempSensorsStruct tempSensors = {
           .triac1 = { .pinNo = 4, DS18B20::NO_READING },
           .triac2 = { .pinNo = 5, DS18B20::NO_READING },
           .triac3 = { .pinNo = 6, DS18B20::NO_READING },

@@ -1,0 +1,2 @@
+- DS18B20 - VCC, D4, GND (Three pin connector)
+- HTU21D  - 3V, GND, A4(SDA), A5(SCL) (Four pin connector)

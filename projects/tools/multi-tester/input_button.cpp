@@ -66,7 +66,7 @@ namespace InputButton {
   bool wasLongPressed(Def &def) {
     Internal &_ctx = def._ctx;
     if (_ctx.wasLongPressed) {
-      _ctx.wasLongPressed = false;
+      _ctx.wasLongPressed = false;//FIXME Also clear wasPressed flag!
       return true;
     }
     bool longPressDetected = isLongPressed(def);// FIXME Wouldn't work: it counts since last state changed - aka when button released not when first pressed!

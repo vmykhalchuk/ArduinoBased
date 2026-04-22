@@ -330,14 +330,30 @@ namespace KH2441EF {
     //     |     |
     //       -d-
 
-    } else if (v == 0x10) { // <none> ()
+    } else if (v == S_BLANK) {  // <none> ()
       seg = 0;
-    } else if (v == 0x11) { // E (0gfed--a)
+    } else if (v == S_E) {      // (0gfed--a) E
       seg = B01111001;
-    } else if (v == 0x12) { // r (0g-e----)
+    } else if (v == S_r) {      // (0g-e----) r
       seg = B01010000;
-    } else if (v == 0x13) { // P (0gfe--ba)
+    } else if (v == S_P) {      // (0gfe--ba) P
       seg = B01110011;
+    } else if (v == S_SEL1) {   // (0-----b-) Select 1
+      seg = B00000010;
+    } else if (v == S_SEL2) {   // (0----c--) Select 2
+      seg = B00000100;
+    } else if (v == S_c) {      // (0g-ed---) c
+      seg = B01011000;
+    } else if (v == S_C) {      // (0-fed--a) C
+      seg = B00111001;
+    } else if (v == S_t) {      // (0gfed---) t
+      seg = B01111000;
+    } else if (v == S_H) {      // (0gfe-cb-) H
+      seg = B01110110;
+    } else if (v == S_h) {      // (0gfe-c--) h
+      seg = B01110100;
+    } else if (v == S_UND) {    // (0---d---) _
+      seg = B00001000;
     }
 
     if (digitNo == 1) {
