@@ -66,10 +66,12 @@ void selectProgramMode() {
           // DoubleClick
           incrementProgNo(true);
           updateDisplayWithProgNo(isOn);
+          state = IDLE;
         } else if (ClockLR::isElapsed(mainStartMs, 500)) {
           // No DoubleClick
           incrementProgNo(false);
           updateDisplayWithProgNo(isOn);
+          state = IDLE;
         }
       break;
       case WAITING_4EXIT:
@@ -101,10 +103,10 @@ void incrementProgNo(bool doubleClick) {
     }
   } else {
     switch (maj) {
-      case 0: minor = minor >= 4 ? 0 : minor++; break;
-      case 1: minor = minor >= 2 ? 0 : minor++; break;
-      case 2: minor = minor >= 3 ? 0 : minor++; break;
-      case 9: minor = minor >= 9 ? 9 : minor++; break;
+      case 0: minor = minor >= 4 ? 0 : minor+1; break;
+      case 1: minor = minor >= 2 ? 0 : minor+1; break;
+      case 2: minor = minor >= 3 ? 0 : minor+1; break;
+      case 9: minor = minor >= 9 ? 9 : minor+1; break;
       default: maj = 0; minor = 0;
     }
   }
@@ -112,20 +114,22 @@ void incrementProgNo(bool doubleClick) {
 }
 
 uint8_t i = 0;
+uint8_t progsData[] = {0,0};
+bool _firstRun = true;
 void loop() {
   ClockLR::tick();
   InputButton::tick(btnMain);
   KH2441EF::tick();
   
   switch(progNo) {
-    case 0: tickProg00(); break;
-    case 3: tickProg03(); break;
+    case 0: tickProg00(progsData[0], progsData[1]); break;
+    case 3: tickProg03(progsData[0], progsData[1]); break;
     default:
       KH2441EF::setDisplayBufToErrorMsg();
   }
-}
 
-uint8_t progsData[] = {0,0};
+  if (_firstRun) _firstRun = false;
+}
 
 void tickProgTT() {
   if (ClockLR::isElapsed(mainStartMs, 1000)) {
@@ -141,17 +145,18 @@ void tickProgTT() {
   }
 }
 
-void tickProg00() {
-  if (InputButton::wasPressed(btnMain)) {
-    progsData[1] = 1;
+void tickProg00(uint8_t &pd0, uint8_t &wasBtnPressed) {
+  bool forceDataRead = false;
+  if (_firstRun || InputButton::wasPressed(btnMain)) {
+    wasBtnPressed = true;
     mainStartMs = ClockLR::now;
     KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_t, KH2441EF::S_UND, KH2441EF::S_C, false);
   }
-  if (progsData[1] == 1 && ClockLR::isElapsed(mainStartMs, 600)) {
-    progsData[1] = 0;
-    mainStartMs = ClockLR::now - 10000 - 100;
+  if (wasBtnPressed && ClockLR::isElapsed(mainStartMs, 600)) {
+    wasBtnPressed = false;
+    forceDataRead = true;
   }
-  if (ClockLR::isElapsed(mainStartMs, 10000)) {
+  if (forceDataRead || ClockLR::isElapsed(mainStartMs, 10000)) {
     KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while Temp measurements take place
     float t = DS18B20::readTemperature(tempSensorDS18B20Pin);
     KH2441EF::setDisplayBufToFloatWithOneDecimal(t);
@@ -159,25 +164,26 @@ void tickProg00() {
   }
 }
 
-void tickProg01() {
-  if (InputButton::wasPressed(btnMain)) {
-    progsData[0] = progsData[0] == 0 ? 1 : 0;
-    progsData[1] = 1;
+void tickProg01(uint8_t &pd0Mode, uint8_t &wasBtnPressed) {
+  bool forceDataRead = false;
+  if (_firstRun || InputButton::wasPressed(btnMain)) {
+    wasBtnPressed = true;
+    pd0Mode = pd0Mode == 0 ? 1 : 0;
     mainStartMs = ClockLR::now;
-    if (progsData[0] == 0) {
+    if (pd0Mode == 0) {
       KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_t, KH2441EF::S_UND, KH2441EF::S_C, false);
     } else {
       KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_BLANK, KH2441EF::S_r, KH2441EF::S_h, false);
     }
   }
-  if (progsData[1] == 1 && ClockLR::isElapsed(mainStartMs, 600)) {
-    progsData[1] = 0;
-    mainStartMs = ClockLR::now - 10000 - 100;
+  if (wasBtnPressed && ClockLR::isElapsed(mainStartMs, 600)) {
+    wasBtnPressed = false;
+    forceDataRead = true;
   }
-  if (ClockLR::isElapsed(mainStartMs, 10000)) {
+  if (forceDataRead || ClockLR::isElapsed(mainStartMs, 10000)) {
     KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while Temp measurements take place
     float d;
-    if (progsData[0] == 0) {
+    if (pd0Mode == 0) {
       d = HTU21D::readTemp();
     } else {
       d = HTU21D::readHum();
@@ -198,7 +204,7 @@ void tickProg01() {
   }
 }
 
-void tickProg03() {
+void tickProg03(uint8_t &pd0, uint8_t &pd1) {
   if (ClockLR::isElapsed(mainStartMs, 1000)) {
     KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while ADC conversion happens
     uint16_t v = AdcProtected::protectedAnalogRead(A0);
