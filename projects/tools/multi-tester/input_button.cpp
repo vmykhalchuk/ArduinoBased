@@ -32,7 +32,7 @@ namespace InputButton {
           _ctx.btnState = !_ctx.btnState;
           _ctx.stateChangeTmstmp = ClockLR::now;
 
-          if (!isPressed(def)) {
+          if (isPressed(def)) {
             _ctx.wasPressed = true;
             //_ctx.wasLongPressed = false;
           } else {

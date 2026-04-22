@@ -55,19 +55,22 @@ void selectProgramMode() {
         }
       break;
       case IDLE:
-        if (InputButton::wasPressed(btnMain)) {
+        if (InputButton::wasReleased(btnMain)) {
           mainStartMs = ClockLR::now;
           state = WAITING_4DOUBLE_CLICK;
         }
-        if (InputButton::isLongPressed(btnMain)) state = WAITING_4EXIT;
+        if (InputButton::isLongPressed(btnMain)) {
+          state = WAITING_4EXIT;
+        }
       break;
       case WAITING_4DOUBLE_CLICK:
-        if (InputButton::wasPressed(btnMain)) {
+        if (InputButton::wasReleased(btnMain)) {
           // DoubleClick
           incrementProgNo(true);
           updateDisplayWithProgNo(isOn);
           state = IDLE;
-        } else if (ClockLR::isElapsed(mainStartMs, 500)) {
+        }
+        if (ClockLR::isElapsed(mainStartMs, 1000)) {
           // No DoubleClick
           incrementProgNo(false);
           updateDisplayWithProgNo(isOn);
