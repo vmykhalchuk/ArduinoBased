@@ -10,27 +10,27 @@ namespace InputButton {
         pinMode(def.pinNo, def.enablePullup ? INPUT_PULLUP : INPUT);
         if (def.enablePullup) digitalWrite(def.pinNo, HIGH);
         _ctx.btnState = digitalRead(def.pinNo);
-        _ctx.lastStateChangedTmstmp = _ctx.timerMark = ClockLR::now;
+        _ctx.stateChangeTmstmp = _ctx.debounceTmstmp = ClockLR::now;
         _ctx.smState = DEBOUNCE_WAITING;
       break;
       case IDLE:
         if (digitalRead(def.pinNo) != _ctx.btnState) {
-          _ctx.timerMark = ClockLR::now;
+          _ctx.debounceTmstmp = ClockLR::now;
           _ctx.smState = DEBOUNCE_WAITING;
         }
 
         // we need to make sure that timer stays high and not overrun to become low again (important for long press)
-        ClockLR::preventTimerOverrun(_ctx.lastStateChangedTmstmp, TOO_LONG_TIME_FREEZE_MAX, TOO_LONG_TIME_FREEZE_MIN);
+        ClockLR::preventTimerOverrun(_ctx.stateChangeTmstmp, TOO_LONG_TIME_FREEZE_MAX, TOO_LONG_TIME_FREEZE_MIN);
       break;
       case DEBOUNCE_WAITING:
-        if (ClockLR::isElapsed(_ctx.timerMark, DEBOUNCE_THRESHOLD_MS)) {
+        if (ClockLR::isElapsed(_ctx.debounceTmstmp, DEBOUNCE_THRESHOLD_MS)) {
           _ctx.smState = DEBOUNCE_FINISHED;
         }
       break;
       case DEBOUNCE_FINISHED:
         if (_ctx.btnState != digitalRead(def.pinNo)) {
           _ctx.btnState = !_ctx.btnState;
-          _ctx.lastStateChangedTmstmp = ClockLR::now;
+          _ctx.stateChangeTmstmp = ClockLR::now;
 
           if (!isPressed(def)) {
             _ctx.wasPressed = true;
@@ -52,7 +52,7 @@ namespace InputButton {
   }
 
   bool isLongPressed(Def &def) {
-    return isPressed(def) && ClockLR::isElapsed(def._ctx.lastStateChangedTmstmp, LONG_PRESS_DURATION_MS);
+    return isPressed(def) && ClockLR::isElapsed(def._ctx.stateChangeTmstmp, LONG_PRESS_DURATION_MS);
   }
 
   bool wasPressed(Def &def) {

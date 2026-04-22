@@ -27,8 +27,8 @@ namespace InputButton {
     bool wasPressed = false;
     bool wasReleased = false;
     bool wasLongPressed = false;
-    uint16_t lastStateChangedTmstmp = 0;
-    uint16_t timerMark = 0;
+    uint16_t stateChangeTmstmp = 0;
+    uint16_t debounceTmstmp = 0;
     SMState smState = NOT_INITIALIZED;
   };
 

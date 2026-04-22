@@ -51,6 +51,7 @@ void selectProgramMode() {
         if (!InputButton::isLongPressed(btnMain)) {
           state = IDLE;
           InputButton::wasPressed(btnMain); // erase wasPressed flag (stays on after longPressed)
+          InputButton::wasReleased(btnMain); // this is hack
         }
       break;
       case IDLE:
@@ -70,6 +71,7 @@ void selectProgramMode() {
           incrementProgNo(false);
           updateDisplayWithProgNo(isOn);
         }
+      break;
       case WAITING_4EXIT:
         if (!InputButton::isPressed(btnMain)) {
           InputButton::wasPressed(btnMain); // FIXME This is hack to clear flags
