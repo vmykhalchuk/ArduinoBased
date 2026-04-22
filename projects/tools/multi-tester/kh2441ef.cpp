@@ -354,6 +354,8 @@ namespace KH2441EF {
       seg = B01110100;
     } else if (v == S_UND) {    // (0---d---) _
       seg = B00001000;
+    } else if (v == S_MINUS) {  // (0g------) -
+      seg = B01000000;
     }
 
     if (digitNo == 1) {

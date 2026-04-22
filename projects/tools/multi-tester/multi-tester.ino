@@ -32,17 +32,17 @@ enum SelProgState { NOT_INTLZD, IDLE, WAITING_4DOUBLE_CLICK, WAITING_4EXIT };
 void selectProgramMode() {
   bool isOn = false;
   SelProgState state = NOT_INTLZD;
-  KH2441EF::setDisplayBuf(0, 0, 0x13, 0, false);
+  KH2441EF::setDisplayBuf(KH2441EF::S_MINUS, KH2441EF::S_MINUS, KH2441EF::S_MINUS, KH2441EF::S_MINUS, false);
   uint16_t doubleClickStartMs, displayBlinkStartMs = ClockLR::tick();
   while (true) {
     ClockLR::tick();
     InputButton::tick(btnMain);
     KH2441EF::tick();
-    if (ClockLR::isElapsed(displayBlinkStartMs, 500)) {
+    if (ClockLR::isElapsed(displayBlinkStartMs, 700)) {
       displayBlinkStartMs = ClockLR::now;
       // update screen
+      isOn = true;//!isOn; // lets stop this blinking
       updateDisplayWithProgNo(isOn);
-      isOn = !isOn;
     }
     bool _exit = false;
     switch (state) {
@@ -77,6 +77,8 @@ void selectProgramMode() {
         }
       break;
       case WAITING_4EXIT:
+        if (!isOn) isOn=true; // force screen to light constantly
+        updateDisplayWithProgNo(isOn, true);
         if (!InputButton::isPressed(btnMain)) {
           InputButton::wasPressed(btnMain); // FIXME This is hack to clear flags
           InputButton::wasReleased(btnMain); // FIXME This is hack to clear flags
@@ -89,7 +91,15 @@ void selectProgramMode() {
 }
 
 void updateDisplayWithProgNo(bool isOn) {
-  KH2441EF::setDisplayBuf(0, 0x13, isOn ? progNo/10 : 0x10, isOn ? progNo%10 : 0x10, false);
+  updateDisplayWithProgNo(isOn, false);
+}
+
+void updateDisplayWithProgNo(bool isOn, bool selectFlag) {
+  KH2441EF::setDisplayBuf(selectFlag ? 1/*KH2441EF::S_SEL2*/ : KH2441EF::S_BLANK,
+                          KH2441EF::S_P,
+                          isOn ? progNo/10 : KH2441EF::S_BLANK,
+                          isOn ? progNo%10 : KH2441EF::S_BLANK,
+                          false);
 }
 
 void incrementProgNo(bool doubleClick) {

@@ -19,6 +19,8 @@ namespace KH2441EF {
   const uint8_t S_H = 0x19;
   const uint8_t S_h = 0x20;
   const uint8_t S_UND = 0x21;
+  const uint8_t S_MINUS = 0x22;
+  const uint8_t S_S = 0x23;
 
   // use either tick() or displayLoop24ms()
   void tick(); // non-blocking
