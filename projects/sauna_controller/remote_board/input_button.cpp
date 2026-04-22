@@ -24,19 +24,22 @@ namespace InputButton {
       break;
       case DEBOUNCE_WAITING:
         if (ClockLR::isElapsed(_ctx.timerMark, DEBOUNCE_THRESHOLD_MS)) {
-          if (_ctx.btnState != digitalRead(def.pinNo)) {
-            _ctx.btnState = !_ctx.btnState;
-            _ctx.lastStateChangedTmstmp = ClockLR::now;
-
-            if (isPressed(def)) {
-              _ctx.wasPressed = true;
-              //_ctx.wasLongPressed = false;
-            } else {
-              _ctx.wasReleased = true;
-            }
-          }
-          _ctx.smState = IDLE;
+          _ctx.smState = DEBOUNCE_FINISHED;
         }
+      break;
+      case DEBOUNCE_FINISHED:
+        if (_ctx.btnState != digitalRead(def.pinNo)) {
+          _ctx.btnState = !_ctx.btnState;
+          _ctx.lastStateChangedTmstmp = ClockLR::now;
+
+          if (isPressed(def)) {
+            _ctx.wasPressed = true;
+            //_ctx.wasLongPressed = false;
+          } else {
+            _ctx.wasReleased = true;
+          }
+        }
+        _ctx.smState = IDLE;
       break;
       default:
         _ctx.smState = ERROR;

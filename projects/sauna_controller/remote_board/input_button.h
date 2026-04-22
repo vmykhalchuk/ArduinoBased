@@ -20,7 +20,7 @@ namespace InputButton {
   static const unsigned int TOO_LONG_TIME_FREEZE_MIN = 10000; // the bigger the gap - the more efficient it becomes (less often timer will get updated)
   
 
-  enum SMState { NOT_INITIALIZED, IDLE, DEBOUNCE_WAITING, ERROR };
+  enum SMState { NOT_INITIALIZED, IDLE, DEBOUNCE_WAITING, DEBOUNCE_FINISHED, ERROR };
   
   struct Internal {
     bool btnState = false; // FIXME Put all bool as flags to optimize space

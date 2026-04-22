@@ -56,6 +56,7 @@ void selectProgramMode() {
       case IDLE:
         if (InputButton::wasPressed(btnMain)) {
           mainStartMs = ClockLR::now;
+          state = WAITING_4DOUBLE_CLICK;
         }
         if (InputButton::isLongPressed(btnMain)) state = WAITING_4EXIT;
       break;
