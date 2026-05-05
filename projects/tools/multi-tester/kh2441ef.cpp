@@ -2,6 +2,11 @@
 
 namespace KH2441EF {
 
+  void lightDSegmentOnlyHigh(uint8_t s);
+  void clearDAll();
+  void setDPinHigh(uint8_t p);
+  void setDPinLow(uint8_t p);
+
   uint8_t displayBuf[] = {0,0,0};
   uint8_t state = 1;
   uint16_t startMs = 0;
@@ -289,16 +294,6 @@ namespace KH2441EF {
   void updateDisplayBufDigitN(uint8_t digitNo, uint8_t v) {
     uint8_t seg = 0;//B0gfedcba
         
-    //       -a-  
-    //     |     |
-    //     f     b
-    //     |     |
-    //       -g-  
-    //     |     |
-    //     e     c
-    //     |     |
-    //       -d-
-
     if (v == 0) {
       seg = B00111111;
     } else if (v == 1) {
@@ -330,7 +325,7 @@ namespace KH2441EF {
     //     |     |
     //       -d-
 
-    } else if (v == S_BLANK) {  // <none> ()
+    } else if (v == S_BLANK) {  // (0-------) <blank>
       seg = 0;
     } else if (v == S_E) {      // (0gfed--a) E
       seg = B01111001;
@@ -356,17 +351,38 @@ namespace KH2441EF {
       seg = B00001000;
     } else if (v == S_MINUS) {  // (0g------) -
       seg = B01000000;
+    } else if (v == S_A) {      // (0gfe-cba) A
+      seg = B01101101;
+    } else if (v == S_S) {      // (0gf-dc-a) S
+      seg = B01101101;
+    } else if (v == S_d) {      // (0g-edcb-) d
+      seg = B01111111;
+    } else if (v == S_u) {      // (0--edc--) u
+      seg = B00011100;
+    } else if (v == S_QM) {     // (0g-e--ba) ?
+      seg = B01010011;
     }
 
+    //       -a-  
+    //     |     |
+    //     f     b
+    //     |     |
+    //       -g-  
+    //     |     |
+    //     e     c
+    //     |     |
+    //       -d-
+
+    // Update Display Buffers
     if (digitNo == 1) {
-      displayBuf[0] = displayBuf[0] | (seg << 1) & B11;
+      displayBuf[0] = displayBuf[0] | ((seg << 1) & B11);
     } else if (digitNo == 2) {
-      displayBuf[0] = displayBuf[0] | seg << 2;
-      displayBuf[1] = displayBuf[1] | (seg & B1000000) >> 6;
+      displayBuf[0] = displayBuf[0] | (seg << 2);
+      displayBuf[1] = displayBuf[1] | ((seg & B1000000) >> 6);
     } else if (digitNo == 3) {
-      displayBuf[1] = displayBuf[1] | seg << 1;
+      displayBuf[1] = displayBuf[1] | (seg << 1);
     } else if (digitNo == 4) {
-      displayBuf[2] = displayBuf[2] | seg << 1;
+      displayBuf[2] = displayBuf[2] | (seg << 1);
     }
   }
 

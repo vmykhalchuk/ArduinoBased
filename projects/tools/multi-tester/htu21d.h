@@ -22,8 +22,6 @@ namespace HTU21D {
 
   Error getError();
 
-  static bool checkCRC(uint8_t msb, uint8_t lsb, uint8_t checksum);
-  
 }
 
 #endif

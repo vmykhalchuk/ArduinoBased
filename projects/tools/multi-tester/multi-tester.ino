@@ -5,31 +5,97 @@
 #include "htu21d.h"
 #include "input_button.h"
 #include "kh2441ef.h"
+#include <pref_one_byte.h>
 
-InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true };
+
+InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true , ._ctx = {}};
 
 int tempSensorDS18B20Pin = 4;
 
+PrefOneByteParanoia prefStore;
 
-uint8_t progNo = 0;
+void freezeAndDisplayEEPROMError() {
+  uint8_t prefStoreError = (uint8_t) prefStore.getLastError();
+  
+  uint16_t timerMs = ClockLR::tick();
+  uint8_t displMsg = 0; // EPr -> Err -> Code
+  while (true) { // FIXME Make it possible to reset EEPROM from here!
+    KH2441EF::tick();
+    ClockLR::tick();
+    InputButton::tick(btnMain);
+    if (ClockLR::isElapsed(timerMs, 500)) {
+      switch (displMsg) {
+        case 0: KH2441EF::setDisplayBuf(KH2441EF::S_SEL1, KH2441EF::S_E, KH2441EF::S_P, KH2441EF::S_r, false); break;
+        case 1: KH2441EF::setDisplayBuf(KH2441EF::S_SEL2, KH2441EF::S_E, KH2441EF::S_r, KH2441EF::S_r, false); break;
+        case 2: KH2441EF::setDisplayBuf(KH2441EF::S_SEL1, KH2441EF::S_UND, prefStoreError/10%10, prefStoreError%10, false); break;
+        default:
+          displMsg = 0;
+      }
+      displMsg = displMsg == 2 ? 0 : displMsg + 1;
+      timerMs = millis();
+    }
+  }
+}
 
 void setup() {
+  uint8_t progNo = prefStore.load();
+  if (!prefStore.isSuccess()) {
+    freezeAndDisplayEEPROMError();
+  }
+  if (prefStore.isEmpty()) progNo = 0;
+  
   uint16_t setupTimerMs = ClockLR::tick();
   while (!ClockLR::isElapsed(setupTimerMs, InputButton::LONG_PRESS_DURATION_MS << 1)) {
     ClockLR::tick();
     InputButton::tick(btnMain);
     if (InputButton::isLongPressed(btnMain)) {
       // enter select program mode
-      selectProgramMode();
+      progNo = selectProgramMode(progNo, false);
       break;
     }
   };
+
+  if (progNo == 99) {
+    // Now we will endlessly select program and save it to EEPROM
+    // Press RESET to exit this loop!
+    while (true) {
+    
+      progNo = selectProgramMode(progNo, true);
+      prefStore.save(progNo);
+      if (!prefStore.isSuccess()) {
+        freezeAndDisplayEEPROMError();
+      }
+      
+      setupTimerMs = ClockLR::tick();
+      uint8_t i = 0;
+      while (true) {
+        ClockLR::tick();
+        InputButton::tick(btnMain);
+        KH2441EF::tick();
+        if (ClockLR::isElapsed(setupTimerMs, 300)) {
+          //updateDisplayWithProgNo(progNo, i % 2, i % 2, true);
+          KH2441EF::setDisplayBuf(i % 2 ? KH2441EF::S_SEL2 : KH2441EF::S_BLANK,
+                        i % 2 ? KH2441EF::S_BLANK : KH2441EF::S_S,
+                        i % 2 ? KH2441EF::S_BLANK : KH2441EF::S_u,
+                        i % 2 ? KH2441EF::S_BLANK : KH2441EF::S_d,
+                        false);
+          setupTimerMs = ClockLR::tick();
+          i++;
+          if (i > 40) break;
+        }
+      }
+    }
+  }
   
   HTU21D::setup();
+  while(true) loop(progNo);
 }
 
+void loop() {}
+
 enum SelProgState { NOT_INTLZD, IDLE, WAITING_4DOUBLE_CLICK, WAITING_4EXIT };
-void selectProgramMode() {
+uint8_t selectProgramMode(uint8_t startWithProgNo, bool forSave99) {
+  uint8_t pn = startWithProgNo;
   bool isOn = false;
   SelProgState state = NOT_INTLZD;
   KH2441EF::setDisplayBuf(KH2441EF::S_MINUS, KH2441EF::S_MINUS, KH2441EF::S_MINUS, KH2441EF::S_MINUS, false);
@@ -42,7 +108,7 @@ void selectProgramMode() {
       displayBlinkStartMs = ClockLR::now;
       // update screen
       isOn = true;//!isOn; // lets stop this blinking
-      updateDisplayWithProgNo(isOn);
+      updateDisplayWithProgNo(pn, isOn, forSave99);
     }
     bool _exit = false;
     switch (state) {
@@ -65,20 +131,20 @@ void selectProgramMode() {
       case WAITING_4DOUBLE_CLICK:
         if (InputButton::wasReleased(btnMain)) {
           // DoubleClick
-          incrementProgNo(true);
-          updateDisplayWithProgNo(isOn);
+          pn = incrementProgNo(pn, true);
+          updateDisplayWithProgNo(pn, isOn, forSave99);
           state = IDLE;
         }
         if (ClockLR::isElapsed(doubleClickStartMs, 600)) {
           // No DoubleClick
-          incrementProgNo(false);
-          updateDisplayWithProgNo(isOn);
+          pn = incrementProgNo(pn, false);
+          updateDisplayWithProgNo(pn, isOn, forSave99);
           state = IDLE;
         }
       break;
       case WAITING_4EXIT:
         if (!isOn) isOn=true; // force screen to light constantly
-        updateDisplayWithProgNo(isOn, true);
+        updateDisplayWithProgNo(pn, isOn, true, forSave99);
         if (!InputButton::isPressed(btnMain)) {
           InputButton::wasPressed(btnMain); // FIXME This is hack to clear flags
           InputButton::wasReleased(btnMain); // FIXME This is hack to clear flags
@@ -88,22 +154,23 @@ void selectProgramMode() {
     }
     if (_exit) break;
   }
+  return pn;
 }
 
-void updateDisplayWithProgNo(bool isOn) {
-  updateDisplayWithProgNo(isOn, false);
+void updateDisplayWithProgNo(uint8_t pn, bool isOn, bool forSave99) {
+  updateDisplayWithProgNo(pn, isOn, false, forSave99);
 }
 
-void updateDisplayWithProgNo(bool isOn, bool selectFlag) {
-  KH2441EF::setDisplayBuf(selectFlag ? 1/*KH2441EF::S_SEL2*/ : KH2441EF::S_BLANK,
-                          KH2441EF::S_P,
-                          isOn ? progNo/10 : KH2441EF::S_BLANK,
-                          isOn ? progNo%10 : KH2441EF::S_BLANK,
+void updateDisplayWithProgNo(uint8_t pn, bool isOn, bool selectFlag, bool forSave99) {
+  KH2441EF::setDisplayBuf(selectFlag || forSave99 ? KH2441EF::S_SEL2 : KH2441EF::S_BLANK,
+                          forSave99 ? KH2441EF::S_S : KH2441EF::S_P,
+                          isOn ? pn/10 : KH2441EF::S_BLANK,
+                          isOn ? pn%10 : KH2441EF::S_BLANK,
                           false);
 }
 
-void incrementProgNo(bool doubleClick) {
-  uint8_t maj = progNo / 10, minor = progNo % 10;
+uint8_t incrementProgNo(uint8_t pn, bool doubleClick) {
+  uint8_t maj = pn / 10, minor = pn % 10;
   if (doubleClick) {
     minor = 0;
     switch (maj) {
@@ -122,22 +189,22 @@ void incrementProgNo(bool doubleClick) {
       default: maj = 0; minor = 0;
     }
   }
-  progNo = maj * 10 + minor;
+  return maj * 10 + minor;
 }
 
-uint8_t i = 0;
 uint8_t progsData[] = {0,0};
 bool _firstRun = true;
 uint16_t progTimerMs;
-void loop() {
+void loop(uint8_t progNo) {
   if (_firstRun) progTimerMs = ClockLR::tick();
   ClockLR::tick();
   InputButton::tick(btnMain);
   KH2441EF::tick();
   
   switch(progNo) {
-    case 0: tickProg00(progsData[0], progsData[1]); break;
-    case 3: tickProg03(progsData[0], progsData[1]); break;
+    case 00: tickProg00(); break;
+    case 01: tickProg01(); break;
+    case 03: tickProg03(); break;
     default:
       KH2441EF::setDisplayBufToErrorMsg();
   }
@@ -145,7 +212,9 @@ void loop() {
   if (_firstRun) _firstRun = false;
 }
 
-void tickProg00(uint8_t &pd0, uint8_t &wasBtnPressed) {
+void tickProg00() {
+  uint8_t &wasBtnPressed = progsData[1];
+  
   bool forceDataRead = false;
   if (_firstRun || InputButton::wasPressed(btnMain)) {
     wasBtnPressed = true;
@@ -164,7 +233,10 @@ void tickProg00(uint8_t &pd0, uint8_t &wasBtnPressed) {
   }
 }
 
-void tickProg01(uint8_t &pd0Mode, uint8_t &wasBtnPressed) {
+void tickProg01() {
+  uint8_t &pd0Mode = progsData[0];
+  uint8_t &wasBtnPressed = progsData[1];
+
   bool forceDataRead = false;
   if (_firstRun || InputButton::wasPressed(btnMain)) {
     wasBtnPressed = true;
@@ -204,7 +276,7 @@ void tickProg01(uint8_t &pd0Mode, uint8_t &wasBtnPressed) {
   }
 }
 
-void tickProg03(uint8_t &pd0, uint8_t &pd1) {
+void tickProg03() {
   if (ClockLR::isElapsed(progTimerMs, 1000)) {
     KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while ADC conversion happens
     uint16_t v = AdcProtected::protectedAnalogRead(A0);

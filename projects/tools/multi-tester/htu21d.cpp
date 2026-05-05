@@ -13,6 +13,8 @@ namespace HTU21D {
     return conversionError;
   }
 
+  bool checkCRC(uint8_t msb, uint8_t lsb, uint8_t checksum);
+
   // 0 - temp; 1 - hum
   uint16_t readRawValue(uint8_t type) {
     conversionError = OK;

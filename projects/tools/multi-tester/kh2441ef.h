@@ -20,7 +20,11 @@ namespace KH2441EF {
   const uint8_t S_h = 0x20;
   const uint8_t S_UND = 0x21;
   const uint8_t S_MINUS = 0x22;
-  const uint8_t S_S = 0x23;
+  const uint8_t S_A = 0x23;
+  const uint8_t S_S = 0x24;
+  const uint8_t S_d = 0x25;
+  const uint8_t S_u = 0x26;
+  const uint8_t S_QM = 0x27;
 
   // use either tick() or displayLoop24ms()
   void tick(); // non-blocking
@@ -35,14 +39,8 @@ namespace KH2441EF {
   void clearDisplayBuf();
   void updateDisplayBufDigitN(uint8_t digitNo, uint8_t v);
 
-  // clear buf and disable ports so display goes dark (useful to prevent some segments to light bright when heavy operation is happening and tick() is not called for extended period)
+  // clear buf and disable ports so display goes dark (useful to prevent some segments to light bright when heavy operation is happening in between tick() calls)
   void muteDisplayInstantly(); //mutes display instantly, to resume its operation - call any setDsplay... / updateDisplay...
-
-  //// PRIVATE
-  static void lightDSegmentOnlyHigh(uint8_t s);
-  static void clearDAll();
-  static void setDPinHigh(uint8_t p);
-  static void setDPinLow(uint8_t p);
   
 }
 

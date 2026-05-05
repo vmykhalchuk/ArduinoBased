@@ -1,23 +1,24 @@
 
-Used to test misc sensors, protocols, leds, etc
+Used to test misc sensors, protocols, components, etc
 
 Programs:
- P00: DS18B20 Temp Sensor
- P01: HTU21D Temp & Hum Sensor
- P02: DHT11 Temp & Hum Sensor
- P03: Analog Read
- P04: Multiple digital inputs
++P00: DS18B20 Temp Sensor
++P01: HTU21D Temp & Hum Sensor
+-P02: DHT11 Temp & Hum Sensor
++P03: Analog Read
+-P04: Multiple digital inputs
  
- P10: WS2811S - out to 10 Leds
- P11: TM1637
- P12: Generate PWM
+-P10: WS2811S - out to 10 Leds
+-P11: TM1637
+-P12: Generate PWM
 
- P20: Read special pulsed pattern with ID+CRC
- P21: Read errors (specialized for my projects)
- P22: Read Serial
- P23: Write Serial
+-P20: Read special pulsed pattern with ID+CRC
+-P21: Read errors (specialized for my projects)
+-P22: Read Serial
+-P23: Write Serial
+-P24: Scan Serial (try different bits and parity till some valid content is produced)
 
- P99: Select auto-start program (stores in EEPROM)
++P99: Select auto-start program (stores in EEPROM)
 
 ------------------------------------------------
 
@@ -34,6 +35,7 @@ DEV NOTES:
  - send CRC/inverted ID to validate connection
  - when receiving any data (data validation fails) - display blinking '---'
      to indicate that any signal is being received
+
 
 ------------------------------------------------
 
