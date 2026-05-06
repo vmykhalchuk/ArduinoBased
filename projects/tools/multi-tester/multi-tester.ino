@@ -1,12 +1,19 @@
+/*
+
+  Multi-tester with set of programs to operate accordingly (see _readme.h)
+
+  Libraries required:
+    - LongLiveThEEPROM v0.1.1 
+ */
+
 #include <Arduino.h>
+#include <pref_one_byte.h>
 #include "adc_protected.h"
 #include "clock.h"
 #include "ds18b20.h"
 #include "htu21d.h"
 #include "input_button.h"
 #include "kh2441ef.h"
-#include <pref_one_byte.h>
-
 
 InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true , ._ctx = {}};
 
@@ -23,7 +30,7 @@ void freezeAndDisplayEEPROMError() {
     KH2441EF::tick();
     ClockLR::tick();
     InputButton::tick(btnMain);
-    if (ClockLR::isElapsed(timerMs, 500)) {
+    if (ClockLR::isElapsed(timerMs, 700)) {
       switch (displMsg) {
         case 0: KH2441EF::setDisplayBuf(KH2441EF::S_SEL1, KH2441EF::S_E, KH2441EF::S_P, KH2441EF::S_r, false); break;
         case 1: KH2441EF::setDisplayBuf(KH2441EF::S_SEL2, KH2441EF::S_E, KH2441EF::S_r, KH2441EF::S_r, false); break;

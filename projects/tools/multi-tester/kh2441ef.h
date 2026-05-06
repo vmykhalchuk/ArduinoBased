@@ -33,11 +33,12 @@ namespace KH2441EF {
   void displayUpdateForBatch(uint8_t i); // TODO make it private
 
   void setDisplayBufToInt(uint16_t i);
+  void setDisplayBufToInt(uint16_t i, bool displayLeadingZeros);
   void setDisplayBufToFloatWithOneDecimal(float f);
   void setDisplayBuf(uint8_t dig1, uint8_t dig2, uint8_t dig3, uint8_t dig4, bool point);
   void setDisplayBufToErrorMsg();
   void clearDisplayBuf();
-  void updateDisplayBufDigitN(uint8_t digitNo, uint8_t v);
+  void _updateDisplayBufDigitN(uint8_t digitNo, uint8_t v);
 
   // clear buf and disable ports so display goes dark (useful to prevent some segments to light bright when heavy operation is happening in between tick() calls)
   void muteDisplayInstantly(); //mutes display instantly, to resume its operation - call any setDsplay... / updateDisplay...

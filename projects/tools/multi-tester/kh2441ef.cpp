@@ -232,10 +232,15 @@ namespace KH2441EF {
   }
 
   void setDisplayBufToInt(uint16_t i) {
+    setDisplayBufToInt(i, false);
+  }
+
+  void setDisplayBufToInt(uint16_t i, bool displayLeadingZeros) {
     if (i >= 2000) {
       setDisplayBufToErrorMsg();
       return;
     }
+    
     uint8_t d1000 = i / 1000 % 10;
     uint8_t d100 =  i / 100 % 10;
     uint8_t d10 =  i / 10 % 10;
@@ -243,6 +248,20 @@ namespace KH2441EF {
     d1000 = d1000 == 0 ? 0x10 : 1;
     d100  = d1000 == 0 && d100 == 0 ? 0x10 : d100;
     d10   = d1000 == 0 && d100 == 0 && d10 == 0 ? 0x10 : d10;
+
+    if (!displayLeadingZeros) {
+      // set leading zeroes to blank
+      if (d1000 == 0) {
+        d1000 = S_BLANK;
+        if (d100 == 0) {
+          d100 = S_BLANK;
+          if (d10 == 0) {
+            d10 = S_BLANK;
+          }
+        }
+      }
+    }
+    
     setDisplayBuf(d1000,d100,d10,d1,false);
   }
   
@@ -255,23 +274,17 @@ namespace KH2441EF {
     if (d100 < 2) {
       setDisplayBuf(d100,d10,d1,d0,true);
     } else {
-      setDisplayBuf(0,9,9,9,false);
+      setDisplayBuf(S_BLANK,0,S_u,S_r,false); // Ovr - Overflow
     }
   }
   
   void setDisplayBuf(uint8_t dig1, uint8_t dig2, uint8_t dig3, uint8_t dig4, bool point) {
     clearDisplayBuf();
     
-    updateDisplayBufDigitN(4, dig4);
-    if (dig3 != 0 || point || dig1 != 0 || dig2 != 0) {
-      updateDisplayBufDigitN(3, dig3);
-    }
-    if ((dig2 != 0) || (dig1 != 0)) {
-      updateDisplayBufDigitN(2, dig2);
-    }
-    if (dig1 == 1) {
-      displayBuf[0] = displayBuf[0] | B0000011;
-    }
+    _updateDisplayBufDigitN(4, dig4);
+    _updateDisplayBufDigitN(3, dig3);
+    _updateDisplayBufDigitN(2, dig2);
+    _updateDisplayBufDigitN(1, dig1);
     if (point) {
       displayBuf[2] = displayBuf[2] | B0000001;
     }
@@ -280,9 +293,9 @@ namespace KH2441EF {
   // Err will be displayed
   void setDisplayBufToErrorMsg() {
     clearDisplayBuf();
-    updateDisplayBufDigitN(2, 0x11); // E
-    updateDisplayBufDigitN(3, 0x12); // r
-    updateDisplayBufDigitN(4, 0x12); // r
+    _updateDisplayBufDigitN(2, 0x11); // E
+    _updateDisplayBufDigitN(3, 0x12); // r
+    _updateDisplayBufDigitN(4, 0x12); // r
   }
   
   void clearDisplayBuf() {
@@ -291,7 +304,7 @@ namespace KH2441EF {
   
   // digitNo: [1;4]
   // v:[0;9]; if digitNo==1 v: [0;1]
-  void updateDisplayBufDigitN(uint8_t digitNo, uint8_t v) {
+  void _updateDisplayBufDigitN(uint8_t digitNo, uint8_t v) {
     uint8_t seg = 0;//B0gfedcba
         
     if (v == 0) {
@@ -375,7 +388,7 @@ namespace KH2441EF {
 
     // Update Display Buffers
     if (digitNo == 1) {
-      displayBuf[0] = displayBuf[0] | ((seg << 1) & B11);
+      displayBuf[0] = displayBuf[0] | ((seg >> 1) & B11);
     } else if (digitNo == 2) {
       displayBuf[0] = displayBuf[0] | (seg << 2);
       displayBuf[1] = displayBuf[1] | ((seg & B1000000) >> 6);

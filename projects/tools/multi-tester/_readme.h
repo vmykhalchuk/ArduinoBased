@@ -36,7 +36,6 @@ DEV NOTES:
  - when receiving any data (data validation fails) - display blinking '---'
      to indicate that any signal is being received
 
-
 ------------------------------------------------
 
  P21: Read errors (specialized for my projects)
