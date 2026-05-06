@@ -26,19 +26,21 @@ void freezeAndDisplayEEPROMError() {
   
   uint16_t timerMs = ClockLR::tick();
   uint8_t displMsg = 0; // EPr -> Err -> Code
+  uint8_t sel = KH2441EF::S_SEL1;
   while (true) { // FIXME Make it possible to reset EEPROM from here!
     KH2441EF::tick();
     ClockLR::tick();
     InputButton::tick(btnMain);
     if (ClockLR::isElapsed(timerMs, 700)) {
       switch (displMsg) {
-        case 0: KH2441EF::setDisplayBuf(KH2441EF::S_SEL1, KH2441EF::S_E, KH2441EF::S_P, KH2441EF::S_r, false); break;
-        case 1: KH2441EF::setDisplayBuf(KH2441EF::S_SEL2, KH2441EF::S_E, KH2441EF::S_r, KH2441EF::S_r, false); break;
-        case 2: KH2441EF::setDisplayBuf(KH2441EF::S_SEL1, KH2441EF::S_UND, prefStoreError/10%10, prefStoreError%10, false); break;
+        case 0: KH2441EF::setDisplayBuf(sel, KH2441EF::S_E, KH2441EF::S_P, KH2441EF::S_r, false); break;
+        case 1: KH2441EF::setDisplayBuf(sel, KH2441EF::S_E, KH2441EF::S_r, KH2441EF::S_r, false); break;
+        case 2: KH2441EF::setDisplayBuf(sel, KH2441EF::S_UND, prefStoreError/10%10, prefStoreError%10, false); break;
         default:
           displMsg = 0;
       }
       displMsg = displMsg == 2 ? 0 : displMsg + 1;
+      sel = sel == KH2441EF::S_SEL1 ? KH2441EF::S_SEL2 : KH2441EF::S_SEL1;
       timerMs = millis();
     }
   }
