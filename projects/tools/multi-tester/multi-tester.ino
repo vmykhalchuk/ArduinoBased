@@ -11,13 +11,16 @@
 #include "adc_protected.h"
 #include "clock.h"
 #include "ds18b20.h"
-#include "htu21d.h"
+#include "htu21d.h" // Uses A4,A5
 #include "input_button.h"
-#include "kh2441ef.h"
+#include "kh2441ef.h" // Pins used 5,6,7,8,9,10
+#include "pinkyvolt_debug.hpp" // Pins used: 2,3,4
 
 InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true , ._ctx = {}};
 
-int tempSensorDS18B20Pin = 4;
+constexpr int tempSensorDS18B20Pin = 4; // FIXME Move to other pin!
+
+constexpr int ADC_MONITOR_PIN = A0;
 
 PrefOneByteParanoia prefStore;
 
@@ -46,7 +49,20 @@ void freezeAndDisplayEEPROMError() {
   }
 }
 
+ErrorTransmitterD5 errorTx;
+  
 void setup() {
+  // DUMMY CODE!!!
+  if (true) {
+    ErrorReceiver::setup();
+    Serial.println(ErrorReceiver::getData());
+    
+    // test that it works
+    Serial.println(pinkyvolt::debug::Util::get_overflow_count());
+    Serial.println(pinkyvolt::debug::Util::get_overflow_count());
+    while(true) errorTx.tick();
+  }
+  
   uint8_t progNo = prefStore.load();
   if (!prefStore.isSuccess()) {
     freezeAndDisplayEEPROMError();
@@ -288,7 +304,7 @@ void tickProg01() {
 void tickProg03() {
   if (ClockLR::isElapsed(progTimerMs, 1000)) {
     KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while ADC conversion happens
-    uint16_t v = AdcProtected::protectedAnalogRead(A0);
+    uint16_t v = AdcProtected::protectedAnalogRead(ADC_MONITOR_PIN);
     KH2441EF::setDisplayBufToInt(v);
     progTimerMs = ClockLR::tick();
   }

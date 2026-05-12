@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include "clock.h"
 
-// Display input->Arduino port: 1->D5;2->D6;3->D7;4->B0;5->B1;6->B2
+// Display input->Arduino port: 1->5(D5);2->6(D6);3->7(D7);4->8(B0);5->9(B1);6->10(B2)
 namespace KH2441EF {
 
   const uint8_t S_BLANK = 0x10;

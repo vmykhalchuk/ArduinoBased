@@ -4,6 +4,7 @@
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
 
+  // Additional improvement:
   // Set the reference to INTERNAL (1.1V) for maximum stability
   // Note: If you do this, your input signal must be < 1.1V!
   // If your signal is 0-5V, keep it at default (AVCC).
