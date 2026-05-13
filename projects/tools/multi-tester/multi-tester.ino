@@ -14,7 +14,10 @@
 #include "htu21d.h" // Uses A4,A5
 #include "input_button.h"
 #include "kh2441ef.h" // Pins used 5,6,7,8,9,10
-#include "pinkyvolt_debug.hpp" // Pins used: 2(INT0),3(INT1),4
+#include "pinkyvolt_debug.hpp"
+//#include "pinkyvolt_debug_rx.hpp" // Pins used: 2(INT0),3(INT1),4
+
+ErrorTransmitterD5 errorTx; // Pin 5
 
 InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true , ._ctx = {}};
 
@@ -48,8 +51,6 @@ void freezeAndDisplayEEPROMError() {
     }
   }
 }
-
-ErrorTransmitterD5 errorTx;
   
 void setup() {
   if (true) {
