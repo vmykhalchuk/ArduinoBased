@@ -19,14 +19,11 @@ extern volatile long unsigned int timer0_overflow_count;
  * FIXME/TODO List
  *  
  *  - [CRITICAL] Add Error handling and delayed back to normal state (switch pin to Z and delay for 5sec)
- *  - [CRITICAL] Add Data validation (CRC or Inverted data)
- *  
- *  - [HIGH] We do Tx->RX then RX->TX - TX can received partial CRC from RX to validate if correct error were sent, then assume transmission was good
+ *  - [CRITICAL] Add Data validation (CRC or Inverted data) (Write back XOR of two bits (8bits=>4bits)) Only when it returns intact to Transmitter - TX will discard cached flags as sent.
+ *                    We do Tx->RX then RX->TX - TX can received partial CRC from RX to validate if correct error were sent, then assume transmission was good
  *  
  *  - [HIGH] FIX writing error handling - when fails - recover cleared errorFlags
  *  - [HIGH][PERFORMANCE] Replace Switch with method pointer to improve perfromance (especially important for wait loops) (best will be simple IJMP (also allign commands into same block sizes, so quick multiplication will lead to required case) to save on RET)
- *  
- *  - [HIGH] Validate if we need some time-outs (when waiting mid-protocol for some line change) - to reset connection if no response for too long
  *  
  *  - [HIGH] Document:
                 - line states
@@ -38,10 +35,7 @@ extern volatile long unsigned int timer0_overflow_count;
                 - timeout behavior
                 - recovery behavior
  *  
- *  - [MED][Refactor] Define states of Pin: enum class TXPinState { PU, Z, AH, AL } and function to transition between states
- *  
  *  - Fix registerError function - see its comments
- *  - skipFullCycle - is overengineering, most places are OK with skipCycle
  *  - make it more flexible in configuration (not only PORTD as a debug pin)
  *  - add option to disable extra protocol checks - to save programm space
  */
@@ -86,7 +80,6 @@ namespace pinkyvolt::debug {
 namespace pinkyvolt::debug::tx {
   
   enum SMState {
-              NOT_INITIALIZED,
               WAITING4CONNECTION, WAITING4CONNECTION_S1, WAITING4CONNECTION_S2, WAITING4CONNECTION_S3, WAITING4CONNECTION_S4, WAITING4CONNECTION_S5,
               WRITING, WRITING_FLAG_S0, WRITING_FLAG_S1, WRITING_FLAG_S2, WRITING_FLAG_S3, WRITING_ERROR,
               READING, READING_BIT_S0, READING_BIT_S1, READING_BIT_S2, READING_BIT_S3, READING_BIT_S4,
@@ -101,8 +94,34 @@ namespace pinkyvolt::debug::tx {
       static_assert((PORTD_PIN <= 7), "PORTD_PIN must be within 0..7 range!");
 
       static constexpr uint8_t _MASK = 1<<PORTD_PIN;
-    
-      SMState _state = NOT_INITIALIZED;
+
+      enum StateGroup {
+        _G_CRIT = 0x10,
+        _G_HANDSHAKE = 0x20,
+        _G_WRITING = 0x30,
+        _G_READING = 0x40
+      };
+      enum FSMState {
+        _CRIT__WAITING_FOR_HANDSHAKE        = _G_CRIT | 0,
+        _CRIT__SKIP_CURRENT_CYCLE           = _G_CRIT | 1,
+        _CRIT__SKIP_FULL_CYCLE              = _G_CRIT | 2,
+        _CRIT__SKIP_TWO_FULL_CYCLES         = _G_CRIT | 3,
+        _CRIT__LONG_WAIT                    = _G_CRIT | 4,
+
+        _HS__S1                             = _G_HANDSHAKE | 1,
+        _HS__S2                             = _G_HANDSHAKE | 2,
+        _HS__S3                             = _G_HANDSHAKE | 3,
+        _HS__S4                             = _G_HANDSHAKE | 4,
+        _HS__S5                             = _G_HANDSHAKE | 5,
+
+        _WR_S0                              = _G_WRITING | 0,
+        _WR_S1                              = _G_WRITING | 1,
+        _WR_S2                              = _G_WRITING | 2,
+        _WR_S3                              = _G_WRITING | 3,
+        _WR_ERR                             = _G_WRITING | 4,
+      };
+      
+      SMState _state = ERROR;
 
       // Set D<PORTD_PIN> To Output (1 cycle)
       inline void setDPinToOutput() { asm volatile ("sbi %0, %1" : : "I" (_SFR_IO_ADDR(DDRD)), "I" (PORTD_PIN) : "memory"); }
@@ -124,22 +143,48 @@ namespace pinkyvolt::debug::tx {
 
       inline bool isDPinLow() { return !(PIND & _MASK); }
 
-      inline void transitionDPin_to_AL() {
-        uint8_t oldSREG = SREG;
-        cli();
-        setDPinToOutput();
-        setDPinToLow();
-        sei();
-        SREG = oldSREG;
-      }
+      enum TXMode {
+        __Z,
+        _PU,
+        _AL,
+        _AH,
+        TXModeCount
+      };
+      
+      TXMode _currTXMode = __Z;
+                                      //   A A P _
+                                      //  _H_L_U_Z
+      static constexpr uint8_t __Z2__ = 0B00110100;
+      static constexpr uint8_t _PU2__ = 0B11000001;
+      static constexpr uint8_t _AL2__ = 0B01000010;
+      static constexpr uint8_t _AH2__ = 0B00011000;
+                                      //=> 2bit opCodes:
+                                      //        00->not allowed(error)    01->toggle PIN
+                                      //        10->set as input          11->set as output
+      static constexpr uint8_t _TRANSITION_MAP[] = {__Z2__, _PU2__, _AL2__, _AH2__};
 
-      inline void transitionDPin_to_AH() {
-        uint8_t oldSREG = SREG;
-        cli();
-        setDPinToOutput();
-        setDPinToHigh();
-        sei();
-        SREG = oldSREG;
+      __attribute__((always_inline))
+      inline bool transitionTX(TXMode changeTo) {
+        static_assert(TXModeCount==4, "TXModeCount must be = 4!");
+
+        uint8_t _trnst = _TRANSITION_MAP[(uint8_t)_currTXMode];
+        uint8_t opCode = _trnst >> ((uint8_t)changeTo<<1);
+        opCode &= 0x3;
+
+        switch (opCode) {
+          case 0: // not allowed (error)
+            return false;
+          case 1: // toggle pin
+            toggleDPinState();
+            break;
+          case 2: // set as input
+            setDPinToInput();
+            break;
+          case 3: // set as output
+            setDPinToOutput();
+            break;
+        }
+        return true;
       }
 
       SMState _skipCycleReturnState = ERROR;
@@ -152,6 +197,8 @@ namespace pinkyvolt::debug::tx {
       inline void skipCurrentCycle(SMState retState) {
         _skipCycleReturnState = retState;
         _state = SKIP_CURRENT_CYCLE;
+
+        asm volatile("" ::: "memory");
         _skipCycleTmr0 = TCNT0;
       }
 
@@ -159,6 +206,8 @@ namespace pinkyvolt::debug::tx {
       inline void skipFullCycle(SMState retState) {
         _skipCycleReturnState = retState;
         _state = SKIP_FULL_CYCLE;
+
+        asm volatile("" ::: "memory");
         _skipCycleTmr0p1 = _skipCycleTmr0 = TCNT0;
         _skipCycleTmr0p1++;
       }
@@ -168,13 +217,16 @@ namespace pinkyvolt::debug::tx {
         _skipCycleReturnState = retState;
         _skipCycleCounter = 0;
         _state = SKIP_TWO_FULL_CYCLES;
+
+        asm volatile("" ::: "memory");
         _skipCycleTmr0 = TCNT0;
       }
 
-      volatile uint8_t _errorFlags = 0;
 
-      uint8_t _writeErrorFlags = 0;
-      uint8_t _writingFlag = 0;
+      volatile uint8_t _errorFlags = 0; // FIXME Rename to data (avoid error in name, make separate class to register error flags)
+
+      uint8_t _writingErrorFlags = 0;   // FIXME Rename to _writingDataBits
+      uint8_t _writingFlag = 0;         // FIXME Rename to _writingBit
 
       uint8_t _readingData = 0;
       uint8_t _readingBit = 0;
@@ -197,30 +249,27 @@ namespace pinkyvolt::debug::tx {
           _errorFlags |= errorFlagsSet;
         }
       }
+
+      void setup() {
+        {
+        setDPinToHigh();
+        setDPinToInput();
+        _currTXMode = _PU;
+        }
+        skipFullCycle(WAITING4CONNECTION);
+      }
   
       void tick() {
-        // FIXME [PERFORMANCE] Replace huge switch with 4 groups and if-else statements
-        //        group #1: waiting for connection (is always the one that most often takes time from this loop, must happen first to make less drag on user sketch)
-        //        group #2: rest (SKIP_*, LONG_WAIT, other steps)  <- consider placing LONG_WAIT just right after WAITING4CONNECTION - two most active states
-        //        group #2: writing
-        //        group #3: reading
-        
+        bool isLow = isDPinLow();
         switch (_state) {
-          case NOT_INITIALIZED:
-            // activate pull-up
-            setDPinToHigh();
-            setDPinToInput();
-            skipFullCycle(WAITING4CONNECTION);
-            break;
-            
           case WAITING4CONNECTION:
             // wait for M on line
-            if (isDPinLow()) {                // Line == M (PD+PU)
+            if (isLow) {                      // Line == M (PD+PU)
               skipFullCycle(WAITING4CONNECTION_S1);
             }
             break;
           case WAITING4CONNECTION_S1:
-            if (isDPinLow()) {                // Line == M (PD+PU)
+            if (isLow) {                      // Line == M (PD+PU)
               setDPinToLow();                 // OUT=Z; Line=L (PD+Z)
               skipFullCycle(WAITING4CONNECTION_S2);
             } else {
@@ -229,7 +278,7 @@ namespace pinkyvolt::debug::tx {
             }
             break;
           case WAITING4CONNECTION_S2:
-            if (isDPinLow()) {                // Line == L (PD+Z)
+            if (isLow) {                      // Line == L (PD+Z)
               // Switch to Active High // After this moment Receiver can verify if its Blind or not to M state of line. If Receiver can see HIGH unexpectedly - it will switch to give-up state
               setDPinToHigh();                // OUT=PU; Line=M (PD+PU)
               skipFullCycle(WAITING4CONNECTION_S3);
@@ -239,7 +288,7 @@ namespace pinkyvolt::debug::tx {
             }
             break;
           case WAITING4CONNECTION_S3:
-            if (isDPinLow()) {                // Line == M (PD+PU)
+            if (isLow) {                      // Line == M (PD+PU)
               setDPinToOutput();              // OUT=AH; Line=H (PD+AH)
               skipFullCycle(WAITING4CONNECTION_S4);
             } else {
@@ -252,7 +301,7 @@ namespace pinkyvolt::debug::tx {
             skipFullCycle(WAITING4CONNECTION_S5);
             break;
           case WAITING4CONNECTION_S5:
-            if (isDPinLow()) {                // Line == M (PD+PU)
+            if (isLow) {                      // Line == M (PD+PU)
               // FIXME What to do next?
               skipFullCycle(WRITING); // FIXME??? Change it if we do not want to Write first
             } else {
@@ -262,8 +311,8 @@ namespace pinkyvolt::debug::tx {
             break;
 
           case WRITING:
-            if (isDPinLow()) {                // Line == M (PD+PU)
-              _writeErrorFlags = _errorFlags;
+            if (isLow) {                      // Line == M (PD+PU)
+              _writingErrorFlags = _errorFlags;
               _errorFlags = 0; // reset - if writing fails we update _errorFlags with _writeErrorFlags <= FIXME Implement that logic
               _writingFlag = 0; // start from bit 0
               _state = WRITING_FLAG_S0;
@@ -273,9 +322,9 @@ namespace pinkyvolt::debug::tx {
             break;
 
           case WRITING_FLAG_S0:
-            if (isDPinLow()) {                // Line == M (PD+PU)
+            if (isLow) {                      // Line == M (PD+PU)
               uint8_t mask = 1 << _writingFlag;
-              if (_writeErrorFlags & mask) {
+              if (_writingErrorFlags & mask) {
                 // Write 0
                 setDPinToLow();               // OUT=Z; Line=L (PD+Z)
                 skipFullCycle(WRITING_FLAG_S1);
@@ -291,7 +340,7 @@ namespace pinkyvolt::debug::tx {
 
           case WRITING_FLAG_S1:
             // We were writing 0
-            if (isDPinLow()) {                // Line == L (PD+Z)
+            if (isLow) {                      // Line == L (PD+Z)
               setDPinToHigh();                // OUT=PU; Line=M (PD+PU)
               _state = WRITING_FLAG_S3;
             } else {
@@ -319,13 +368,13 @@ namespace pinkyvolt::debug::tx {
 
           case WRITING_ERROR:
             // recover flags back (were not sent to Receiver)
-            registerErrorsInBulk(_writeErrorFlags);
+            registerErrorsInBulk(_writingErrorFlags);
             skipFullCycle(ERROR); // FIXME add proper handling
             break;
           
 
           case READING:
-            if (isDPinLow()) {                // Line == M (PD+PU)
+            if (isLow) {                      // Line == M (PD+PU)
               _readingData = 0;
               _readingBit = 0;
               _state = READING_BIT_S0;
@@ -335,7 +384,7 @@ namespace pinkyvolt::debug::tx {
             break;
 
           case READING_BIT_S0:
-            if (isDPinLow()) {                // Line == M (PD+PU)
+            if (isLow) {                      // Line == M (PD+PU)
               setDPinToOutput();              // OUT=AH; Line=H (PD+AH)
               skipFullCycle(READING_BIT_S1);
             } else {
@@ -343,7 +392,7 @@ namespace pinkyvolt::debug::tx {
             }
             break;
           case READING_BIT_S1:
-            if (!isDPinLow()) {               // Line == H (PD+AH)
+            if (!isLow) {                     // Line == H (PD+AH)
               setDPinToLow();                 // OUT=AL; Line=L (PD+AL) (No possible action on Receiver side can change Line state, so it is safe to transition here in two steps)
               setDPinToInput();               // OUT= Z; Line=L (PD+Z)
               skipFullCycle(READING_BIT_S2);
@@ -352,7 +401,7 @@ namespace pinkyvolt::debug::tx {
             }
             break;
           case READING_BIT_S2:
-            if (isDPinLow()) {                // Line == L (PD+Z)
+            if (isLow) {                      // Line == L (PD+Z)
               setDPinToHigh();                // OUT=PU; Line=M (PD+PU)
               skipFullCycle(READING_BIT_S3);
             } else {
@@ -360,20 +409,17 @@ namespace pinkyvolt::debug::tx {
             }
             break;
           case READING_BIT_S3:
-            {
-              bool isLow = isDPinLow();
-              if (!isLow) {
-                _readingData |= 1 << _readingBit;
-              }
-              if (isLow) {                    // Line == M (PD+PU)
-                setDPinToLow();               // OUT=Z; Line = L (PD+Z)   // FIXME Make Sure Receiver DOESN'T ACT AT THIS M=>L TRANSITION!!!
-                setDPinToOutput();            // OUT=AL; Line = L (PD+AL)
-                skipFullCycle(READING_BIT_S4);
-              } else {                        // Line == H (Z+PU)
-                setDPinToOutput();            // OUT=AH; Line = H (Z+AH)
-                setDPinToLow();               // OUT=AL; Line = L (Z+AL)
-                skipFullCycle(READING_BIT_S4);
-              }
+            if (!isLow) {
+              _readingData |= 1 << _readingBit;
+            }
+            if (isLow) {                    // Line == M (PD+PU)
+              setDPinToLow();               // OUT=Z; Line = L (PD+Z)   // FIXME Make Sure Receiver DOESN'T ACT AT THIS M=>L TRANSITION!!!
+              setDPinToOutput();            // OUT=AL; Line = L (PD+AL)
+              skipFullCycle(READING_BIT_S4);
+            } else {                        // Line == H (Z+PU)
+              setDPinToOutput();            // OUT=AH; Line = H (Z+AH)
+              setDPinToLow();               // OUT=AL; Line = L (Z+AL)
+              skipFullCycle(READING_BIT_S4);
             }
             break;
           case READING_BIT_S4:                // Line == L (PD+AL)
@@ -444,7 +490,7 @@ using ErrorTransmitterD6 = pinkyvolt::debug::tx::OneWireErrorTransmitter<6>;
 using ErrorTransmitterD7 = pinkyvolt::debug::tx::OneWireErrorTransmitter<7>;
   
 namespace pinkyvolt::debug::rx {
-  
+
   template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
   class OneWireErrorReceiver final {
     private:
@@ -481,6 +527,14 @@ namespace pinkyvolt::debug::rx {
         LineStateCount
       };
 
+      struct LineThenState {
+        // [NOTE] fields order must adhere to same order as LineState!
+        uint8_t _m;
+        uint8_t _h;
+        uint8_t _l;
+        uint8_t _u;
+      } __attribute__((packed));
+  
       inline static LineState _readLine() {
         uint8_t r = PIND >> PORTD_PIN;
         r &= 0x3;
@@ -488,16 +542,17 @@ namespace pinkyvolt::debug::rx {
       }
 
       /*
-       *   -=- PROTOCOL -=- 
+             -=- PROTOCOL -=- 
 
               Handshake:
               M -> L -> M -> H -> M
+
+              Reading 8 bits
+                Read 0:
+                L -> M
               
-              Read 0:
-              L -> M
-              
-              Read 1:
-              H -> M
+                Read 1:
+                H -> M
 
        */
 
@@ -522,27 +577,48 @@ namespace pinkyvolt::debug::rx {
       static constexpr uint8_t _SF_IS_CONNECTED = 1<<0;
       static constexpr uint8_t _SF_IS_ERROR = 1<<1;
       static constexpr uint8_t _SF_FRESH_DATA = 1<<2;
-      static constexpr uint8_t _SF_ERROR_TIMER_ACTIVE = 1<<7;
+      static constexpr uint8_t _SF_WAS_STALLED = 1<<3; // Communication was stalled // FIXME Add support of this Flag (read function and flag set/clear logic)
+      static constexpr uint8_t _SF_WDT = 1<<6; // FSM transitions will clear this flag to let tick() reset timer. If though wdt timer elapses - communication is stale - and will be restarted!
+      static constexpr uint8_t _SF_COMMERROR_TIMER_ACTIVE = 1<<7; // when comm error happens, coomunication is supsended and timer counts to attempt restart
       static volatile uint8_t _statusFlags;
-      static inline bool __isSFSet(uint8_t sf) { return _statusFlags & sf; }
-      static inline void __setSF(uint8_t sf) { _statusFlags |= sf; }
-      static inline void __clearSF(uint8_t sf) { _statusFlags &= ~sf; }
+      static inline bool __isSFSet(uint8_t sf) {
+        bool isSet;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+          isSet = _statusFlags & sf;
+        }
+        return isSet;
+      }
+      static inline void __setSF(uint8_t sf) {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+          _statusFlags |= sf;
+        }
+      }
+      static inline void __clearSF(uint8_t sf) {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+          _statusFlags &= ~sf;
+        }
+      }
 
       static volatile uint8_t _receivedData;
       
       static uint8_t _readingDataBuf;
       static uint8_t _readingDataBit;
 
-      static uint8_t _lineThenStates[LineStateCount];
+      static LineThenState _lineTransitions;
+      static uint8_t* const _lineTransitionsAsArr;
 
       static constexpr uint16_t ERROR_COMMUNICATION_TIMEOUT_MS = 5000;
       static uint16_t _commErrorTimer;
 
+      // When no change in signal happens within this amount of time => communication is reset
+      static constexpr uint16_t COMMUNICATION_STALL_TIMEOUT_MS = 2000;
+      static uint16_t _wdtTimer;
+      
       __attribute__((always_inline))
       static inline void __lineExpectsLMH(uint8_t _l, uint8_t _m, uint8_t _h) {
-        _lineThenStates[(int)L] = _l;
-        _lineThenStates[(int)M] = _m;
-        _lineThenStates[(int)H] = _h;
+        _lineTransitions._l = _l;
+        _lineTransitions._m = _m;
+        _lineTransitions._h = _h;
       }
 
       // FIXME Replace with enum
@@ -565,13 +641,16 @@ namespace pinkyvolt::debug::rx {
       static constexpr uint8_t _SM_READ__S0                     = _SM_GROUP_3_READ | 0;
       static constexpr uint8_t _SM_READ__S1                     = _SM_GROUP_3_READ | 1;
       static constexpr uint8_t _SM_READ__S2                     = _SM_GROUP_3_READ | 2;
-      
-      static constexpr uint8_t _SM_RARE__ERROR_INPUT_COMBINATION = _SM_GROUP_5_RARE | 0; // this error happens when wrong D2,D3 input (totally unexpected and most likely caused by hardware failure)
+
+      // this error happens when wrong D2,D3 input (totally unexpected and most likely caused by hardware failure)
+      static constexpr uint8_t _SM_RARE__ERROR_INPUT_COMBINATION = _SM_GROUP_5_RARE | 0;
       
       __attribute__((always_inline))
       static void inline _interruptHandler() {
+        // clear WDT to prevent it from restarting connection
+        __clearSF(_SF_WDT);
         LineState ls = _readLine();
-        uint8_t state = _lineThenStates[(int)ls];
+        uint8_t state = _lineTransitionsAsArr[(uint8_t)ls];
         if (state == _SM_NOP) {
           // FIXME For interrupt way of handling things - this will never happen! Remove this state - or make it an error (cause it should not happen)
         } else {
@@ -604,15 +683,14 @@ namespace pinkyvolt::debug::rx {
           __clearSF(_SF_IS_CONNECTED);
           __lineExpectsLMH(_SM_NOP, _SM_NOP, _SM_NOP);                      // => None of states will do any action till timer expires
           
-          // FIXME Now enable some kind of timer here, after it elapses - restart communication attempts (execute part of setup)
+          // Enable CommError timer, after it elapses - restart communication
           _commErrorTimer = ClockLR::tick();
-          __setSF(_SF_ERROR_TIMER_ACTIVE);
+          __setSF(_SF_COMMERROR_TIMER_ACTIVE);
         }
       }
 
       __attribute__((always_inline))
       static void inline _handleHandshakeStates(uint8_t state) {
-        // FIXME Order IFs
         if (state == _SM_HANDSHAKE__S0) {                                   // Line is L
           __lineExpectsLMH(_SM_NOP, _SM_HANDSHAKE__S1, _SM_CRIT__COMMERROR);// => waiting for M, H will produce error
           
@@ -658,7 +736,7 @@ namespace pinkyvolt::debug::rx {
         }
       }
 
-      static void _resumeOperation() {
+      static void _restartConnection() {
         __clearSF(_SF_IS_CONNECTED);
         __clearSF(_SF_IS_ERROR);
         _activatePD();
@@ -669,23 +747,34 @@ namespace pinkyvolt::debug::rx {
     public:
 
       static void setup() {
-        _lineThenStates[(int)U] = _SM_RARE__ERROR_INPUT_COMBINATION;
+        _lineTransitions._u = _SM_RARE__ERROR_INPUT_COMBINATION;
         _initializePorts();
 
-        _resumeOperation();
+        _restartConnection();
         
         attachInterrupt(digitalPinToInterrupt(PORTD_PIN), _interruptHandler, CHANGE);
         attachInterrupt(digitalPinToInterrupt(PORTD_PIN_CMP), _interruptHandler, CHANGE);
       }
 
-      // Assumes ClockLR was updated!
-      // FIXME We need some solution to make sure that happens (at compile time see the link)
+      // Assumes ClockLR was updated! // FIXME We need this assertion happen at compile time!
       static void tick() {
-        if (__isSFSet(_SF_ERROR_TIMER_ACTIVE) 
+        if (__isSFSet(_SF_COMMERROR_TIMER_ACTIVE)
               && ClockLR::isElapsed(_commErrorTimer, ERROR_COMMUNICATION_TIMEOUT_MS)) {
                 
-          __clearSF(_SF_ERROR_TIMER_ACTIVE);
-          _resumeOperation();
+          __clearSF(_SF_COMMERROR_TIMER_ACTIVE);
+          _restartConnection();
+        }
+
+        // WDT
+        if (!isConnected()) __clearSF(_SF_WDT);
+        if (!__isSFSet(_SF_WDT)) {
+          // wdt flag was cleared - we can reset timer
+          __setSF(_SF_WDT);
+          _wdtTimer = ClockLR::now;
+        }
+        if (ClockLR::isElapsed(_wdtTimer, COMMUNICATION_STALL_TIMEOUT_MS)) {
+          __clearSF(_SF_WDT);
+          _restartConnection();
         }
       }
 
@@ -712,18 +801,23 @@ namespace pinkyvolt::debug::rx {
       
   };
 
-  template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
-  volatile uint8_t OneWireErrorReceiver<PORTD_PIN,PORTD_PIN_CMP,PORTD_PIN_PD>::_statusFlags = 0;
-  template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
-  volatile uint8_t OneWireErrorReceiver<PORTD_PIN,PORTD_PIN_CMP,PORTD_PIN_PD>::_receivedData = 0;
-  template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
-  uint8_t OneWireErrorReceiver<PORTD_PIN,PORTD_PIN_CMP,PORTD_PIN_PD>::_readingDataBuf = 0;
-  template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
-  uint8_t OneWireErrorReceiver<PORTD_PIN,PORTD_PIN_CMP,PORTD_PIN_PD>::_readingDataBit = 0;
-  template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
-  uint8_t OneWireErrorReceiver<PORTD_PIN,PORTD_PIN_CMP,PORTD_PIN_PD>::_lineThenStates[LineStateCount];
-  template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
-  uint16_t OneWireErrorReceiver<PORTD_PIN,PORTD_PIN_CMP,PORTD_PIN_PD>::_commErrorTimer = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD>
+  volatile uint8_t OneWireErrorReceiver<P,C,PD>::_statusFlags = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD>
+  volatile uint8_t OneWireErrorReceiver<P,C,PD>::_receivedData = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD>
+  uint8_t OneWireErrorReceiver<P,C,PD>::_readingDataBuf = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD>
+  uint8_t OneWireErrorReceiver<P,C,PD>::_readingDataBit = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD>
+  typename OneWireErrorReceiver<P,C,PD>::LineThenState OneWireErrorReceiver<P,C,PD>::_lineTransitions;
+  template <uint8_t P, uint8_t C, uint8_t PD>
+  uint16_t OneWireErrorReceiver<P,C,PD>::_commErrorTimer = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD>
+  uint16_t OneWireErrorReceiver<P,C,PD>::_wdtTimer = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD>
+  uint8_t* const OneWireErrorReceiver<P,C,PD>::_lineTransitionsAsArr = 
+                    (uint8_t*)&OneWireErrorReceiver<P,C,PD>::_lineTransitions;
 
 }
 

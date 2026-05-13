@@ -14,7 +14,7 @@
 #include "htu21d.h" // Uses A4,A5
 #include "input_button.h"
 #include "kh2441ef.h" // Pins used 5,6,7,8,9,10
-#include "pinkyvolt_debug.hpp" // Pins used: 2,3,4
+#include "pinkyvolt_debug.hpp" // Pins used: 2(INT0),3(INT1),4
 
 InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true , ._ctx = {}};
 
@@ -52,15 +52,20 @@ void freezeAndDisplayEEPROMError() {
 ErrorTransmitterD5 errorTx;
   
 void setup() {
-  // DUMMY CODE!!!
   if (true) {
+    Serial.begin(9600);
+    Serial.println("Hello from Dummy! I am Dum Dum...");
+    // DUMMY CODE!!!
     ErrorReceiver::setup();
     Serial.println(ErrorReceiver::getData());
-    
+    ClockLR::tick(); ErrorReceiver::tick();
+
+    errorTx.setup();
     // test that it works
     Serial.println(pinkyvolt::debug::Util::get_overflow_count());
+    delay(3);
     Serial.println(pinkyvolt::debug::Util::get_overflow_count());
-    while(true) errorTx.tick();
+    errorTx.tick();
   }
   
   uint8_t progNo = prefStore.load();
