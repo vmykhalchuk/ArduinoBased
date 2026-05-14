@@ -77,6 +77,28 @@ Select Comparator for task
 
 *V=5V*2.7k/(55k+2.7k)*
 
+#### Design improvement - Active pull-up at start
+
+##### Idea 1 : Suggestion 1
+Currently when we connect Receiver to Transmitter - connection will present jittering on line, causing protocol failures.
+To prevent this - we can drive Line on Receiver side to HIGH via 200Ohm resistor.
+And after a while - when connection established - disconnect that pull-up.
+
+Cons: Receiver should be commanded by user to start communication.
+   This is tradeoff - tolerate communication failure at start and let timeouts restart it, however user doesn't have to do anything
+                    - or force user to start communication after physical connection is done
+Cons: User might forget to disable communication and break physical connection and re-connect again - causing initial issue we try to solve here.
+
+##### Idea 1 : Suggestion 2 (best if this resistor will not affect Comparator)
+
+We can instead pull LOW via big resistor (400K), and monitor input - when it comes HIGH (due to PU on TX Side - after delay we can start communication)
+Also Pull down should be very close to connector and should use comparator to send strong signal to MCU.
+
+##### Idea 1 : Suggestion 3
+
+Add Debouncing stage into TX Handshake FSM (debounce when Handshake starts)
+
+
 #### Electrical considerations
 
 **Ask AI to solve this:**

@@ -10,6 +10,8 @@ namespace pinkyvolt::debug::rx {
   template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
   class OneWireErrorReceiver final {
     private:
+      OneWireErrorReceiver() {};
+
       static_assert((PORTD_PIN == 2), "PORTD_PIN must be 2");
       static_assert((PORTD_PIN_CMP == 3), "PORTD_PIN must be 3");
 
@@ -23,6 +25,33 @@ namespace pinkyvolt::debug::rx {
 
       static_assert((PORTD_PIN_CMP == PORTD_PIN + 1), "PORTD_PIN_CMP MUST be PORTD_PIN + 1");
       
+      enum FSMStateGroup : uint8_t {
+        _G_CRIT = 0x10,
+        _G_HS   = 0x20,
+        _G_RD   = 0x30,
+        _G_WR   = 0x40,
+        _G_OTH  = 0x50
+      };
+
+      enum FSMState : uint8_t {
+        _SM_NOP                             = 0,
+        
+        _SM_CRIT__WAITING_FOR_CONNECTION    = _G_CRIT | 0,
+        _SM_CRIT__COMMERROR                 = _G_CRIT | 1, // Communication error
+
+        _SM_HANDSHAKE__S0                   = _G_HS | 0,
+        _SM_HANDSHAKE__S1                   = _G_HS | 1,
+        _SM_HANDSHAKE__S2                   = _G_HS | 2,
+        _SM_HANDSHAKE__S3                   = _G_HS | 3,
+
+        _SM_READ__S0                        = _G_RD | 0,
+        _SM_READ__S1                        = _G_RD | 1,
+        _SM_READ__S2                        = _G_RD | 2,
+
+        // this error happens when wrong D2,D3 input (totally unexpected and most likely caused by hardware failure)
+        _SM_RARE__ERROR_INPUT_COMBINATION   = _G_OTH | 0,
+        _SM_RARE__ALG_ERROR_UNHANDLED_STATE = _G_OTH | 1,
+      };
 
       inline static void __setDPinToInput()  { asm volatile ("cbi %0, %1" : : "I" (_SFR_IO_ADDR(DDRD)),  "I" (PORTD_PIN) : "memory"); }
       inline static void __setDPinToLow()    { asm volatile ("cbi %0, %1" : : "I" (_SFR_IO_ADDR(PORTD)), "I" (PORTD_PIN) : "memory"); }
@@ -34,7 +63,7 @@ namespace pinkyvolt::debug::rx {
       inline static void __setDPinPDToInput()  { asm volatile ("cbi %0, %1" : : "I" (_SFR_IO_ADDR(DDRD)),  "I" (PORTD_PIN_PD) : "memory"); }
       inline static void __setDPinPDToLow()    { asm volatile ("cbi %0, %1" : : "I" (_SFR_IO_ADDR(PORTD)), "I" (PORTD_PIN_PD) : "memory"); }
 
-      enum LineState {
+      enum LineState : uint8_t {
         // NOTE: CMP has 1 when voltage is below its threshold (0.15V) and 0 when above
         M, // PIN_CMP==0 && PIN==0 // Middle (PD+PU)
         H, // PIN_CMP==0 && PIN==1 // High   (PD+AH)|( Z+PU)|( Z+AH)
@@ -45,10 +74,10 @@ namespace pinkyvolt::debug::rx {
 
       struct LineThenState {
         // [NOTE] fields order must adhere to same order as LineState!
-        uint8_t _m;
-        uint8_t _h;
-        uint8_t _l;
-        uint8_t _u;
+        FSMState _m;
+        FSMState _h;
+        FSMState _l;
+        FSMState _u;
       } __attribute__((packed));
   
       inline static LineState _readLine() {
@@ -90,13 +119,14 @@ namespace pinkyvolt::debug::rx {
         __setDPinPDToInput();
       }
 
+      //  --- STATUS FLAGS FUNCTIONALITY  ---
       static constexpr uint8_t _SF_IS_CONNECTED = 1<<0;
       static constexpr uint8_t _SF_IS_ERROR = 1<<1;
       static constexpr uint8_t _SF_FRESH_DATA = 1<<2;
       static constexpr uint8_t _SF_WAS_STALLED = 1<<3; // Communication was stalled // FIXME Add support of this Flag (read function and flag set/clear logic)
       static constexpr uint8_t _SF_WDT = 1<<6; // FSM transitions will clear this flag to let tick() reset timer. If though wdt timer elapses - communication is stale - and will be restarted!
       static constexpr uint8_t _SF_COMMERROR_TIMER_ACTIVE = 1<<7; // when comm error happens, coomunication is supsended and timer counts to attempt restart
-      static volatile uint8_t _statusFlags;
+      static volatile uint8_t _statusFlags; // TODO [PERFORMANCE] Move flags into GPIOR0 register - and use single word commands to modify and test
       static inline bool __isSFSet(uint8_t sf) {
         bool isSet;
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -115,9 +145,11 @@ namespace pinkyvolt::debug::rx {
         }
       }
 
+      // --- MAIN REGISTERS ---
+
       static volatile uint8_t _receivedData;
       
-      static uint8_t _readingDataBuf;
+      static uint8_t _readingDataBuf; // FIXME We expect 64 bits! Use 8 bytes array!
       static uint8_t _readingDataBit;
 
       static LineThenState _lineTransitions;
@@ -129,37 +161,47 @@ namespace pinkyvolt::debug::rx {
       // When no change in signal happens within this amount of time => communication is reset
       static constexpr uint16_t COMMUNICATION_STALL_TIMEOUT_MS = 2000;
       static uint16_t _wdtTimer;
+
+      // --- MAIN HELPING FUNCTIONS ---
       
       __attribute__((always_inline))
-      static inline void __lineExpectsLMH(uint8_t _l, uint8_t _m, uint8_t _h) {
+      static inline void __lineExpectsLMH(FSMState _l, FSMState _m, FSMState _h) {
         _lineTransitions._l = _l;
         _lineTransitions._m = _m;
         _lineTransitions._h = _h;
       }
 
-      // FIXME Replace with enum
-      static constexpr uint8_t _SM_GROUP_1_CRIT = 0x10;
-      static constexpr uint8_t _SM_GROUP_2_HANDSHAKE = 0x20;
-      static constexpr uint8_t _SM_GROUP_3_READ = 0x30;
-      static constexpr uint8_t _SM_GROUP_4_WRITE = 0x40;
-      static constexpr uint8_t _SM_GROUP_5_RARE = 0x50;
+      __attribute__((always_inline))
+      static inline void __lineExpectsALL(FSMState _s) {
+        __lineExpectsLMH(_s, _s, _s);
+      }
 
-      static constexpr uint8_t _SM_NOP                          = 0; // DO NOTHING
-      
-      static constexpr uint8_t _SM_CRIT__WAITING_FOR_CONNECTION = _SM_GROUP_1_CRIT | 0;
-      static constexpr uint8_t _SM_CRIT__COMMERROR              = _SM_GROUP_1_CRIT | 1; // Communication error
+      // --- MAIN LOGIC FUNCTION --
 
-      static constexpr uint8_t _SM_HANDSHAKE__S0                = _SM_GROUP_2_HANDSHAKE | 0;
-      static constexpr uint8_t _SM_HANDSHAKE__S1                = _SM_GROUP_2_HANDSHAKE | 1;
-      static constexpr uint8_t _SM_HANDSHAKE__S2                = _SM_GROUP_2_HANDSHAKE | 2;
-      static constexpr uint8_t _SM_HANDSHAKE__S3                = _SM_GROUP_2_HANDSHAKE | 3;
+      static void _restartConnection() {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+          //__lineExpectsLMH(_SM_NOP, _SM_NOP, _SM_NOP);
+          __clearSF(_SF_IS_CONNECTED);
+          __clearSF(_SF_IS_ERROR);
+          //delay(1);
+          __lineExpectsLMH(_SM_NOP, _SM_CRIT__WAITING_FOR_CONNECTION, _SM_CRIT__COMMERROR);
+          _activatePD();
+        }
+      }
 
-      static constexpr uint8_t _SM_READ__S0                     = _SM_GROUP_3_READ | 0;
-      static constexpr uint8_t _SM_READ__S1                     = _SM_GROUP_3_READ | 1;
-      static constexpr uint8_t _SM_READ__S2                     = _SM_GROUP_3_READ | 2;
+    public:
 
-      // this error happens when wrong D2,D3 input (totally unexpected and most likely caused by hardware failure)
-      static constexpr uint8_t _SM_RARE__ERROR_INPUT_COMBINATION = _SM_GROUP_5_RARE | 0;
+      static void setup() {
+        _lineTransitions._u = _SM_RARE__ERROR_INPUT_COMBINATION;
+        _initializePorts();
+
+        _restartConnection();
+        
+        attachInterrupt(digitalPinToInterrupt(PORTD_PIN), _interruptHandler, CHANGE);
+        attachInterrupt(digitalPinToInterrupt(PORTD_PIN_CMP), _interruptHandler, CHANGE);
+      }
+
+    private:
       
       __attribute__((always_inline))
       static void inline _interruptHandler() {
@@ -171,16 +213,18 @@ namespace pinkyvolt::debug::rx {
           // FIXME For interrupt way of handling things - this will never happen! Remove this state - or make it an error (cause it should not happen)
         } else {
           uint8_t group = state & 0xF0;
-          if (group == _SM_GROUP_1_CRIT) {
+          if (group == _G_CRIT) {
             _handleCritStates(state);
-          } else if (group == _SM_GROUP_2_HANDSHAKE) {
+          } else if (group == _G_HS) {
             _handleHandshakeStates(state);
-          } else if (group == _SM_GROUP_3_READ) {
+          } else if (group == _G_RD) {
             _handleReadStates(state, ls);
-          } else if (group == _SM_GROUP_4_WRITE) {
+          } else if (group == _G_WR) {
             // FIXME Implement it!
-          } else if (group == _SM_GROUP_5_RARE) {
+          } else if (group == _G_OTH) {
             // FIXME Implement it!
+          } else {
+            __lineExpectsALL(_SM_RARE__ALG_ERROR_UNHANDLED_STATE);
           }
         }
       }
@@ -195,13 +239,16 @@ namespace pinkyvolt::debug::rx {
           
         } else if (state == _SM_CRIT__COMMERROR) {                          // Line is L,M,H
           __setSF(_SF_IS_ERROR);
-          _deactivatePD(); // show Tx that we give-up
-          __clearSF(_SF_IS_CONNECTED);
           __lineExpectsLMH(_SM_NOP, _SM_NOP, _SM_NOP);                      // => None of states will do any action till timer expires
+          _deactivatePD(); // show Tx that we gave-up
+          __clearSF(_SF_IS_CONNECTED);
           
           // Enable CommError timer, after it elapses - restart communication
           _commErrorTimer = ClockLR::tick();
           __setSF(_SF_COMMERROR_TIMER_ACTIVE);
+
+        } else {
+          __lineExpectsALL(_SM_RARE__ALG_ERROR_UNHANDLED_STATE);
         }
       }
 
@@ -221,6 +268,9 @@ namespace pinkyvolt::debug::rx {
           _readingDataBuf = 0;
           _readingDataBit = 0;
           __lineExpectsLMH(_SM_READ__S0, _SM_NOP, _SM_READ__S0);            // => waiting for L or H
+
+        } else {
+          __lineExpectsALL(_SM_RARE__ALG_ERROR_UNHANDLED_STATE);
         }
       }
 
@@ -232,6 +282,7 @@ namespace pinkyvolt::debug::rx {
             __lineExpectsLMH(_SM_NOP, _SM_READ__S1, _SM_CRIT__COMMERROR);   // => waiting for M, H will produce error
             
           } else {                                                          //    is H
+            // reconstruct by setting first bit and shifting whole byte in _SM_READ__S1
             _readingDataBuf |= 1 << _readingDataBit;
             __lineExpectsLMH(_SM_CRIT__COMMERROR, _SM_READ__S1, _SM_NOP);   // => waiting for M, L will produce error
           }
@@ -249,28 +300,13 @@ namespace pinkyvolt::debug::rx {
             // FIXME Implement this!!!
             //_state = WRITING;
           }
+
+        } else {
+          __lineExpectsALL(_SM_RARE__ALG_ERROR_UNHANDLED_STATE);
         }
       }
 
-      static void _restartConnection() {
-        __clearSF(_SF_IS_CONNECTED);
-        __clearSF(_SF_IS_ERROR);
-        _activatePD();
-        delay(1); // short delay to let line settle // FIXME [CRITICAL] Add delay on TX Side to wait before initiating handshake
-        __lineExpectsLMH(_SM_NOP, _SM_CRIT__WAITING_FOR_CONNECTION, _SM_CRIT__COMMERROR);
-      }
-
     public:
-
-      static void setup() {
-        _lineTransitions._u = _SM_RARE__ERROR_INPUT_COMBINATION;
-        _initializePorts();
-
-        _restartConnection();
-        
-        attachInterrupt(digitalPinToInterrupt(PORTD_PIN), _interruptHandler, CHANGE);
-        attachInterrupt(digitalPinToInterrupt(PORTD_PIN_CMP), _interruptHandler, CHANGE);
-      }
 
       // Assumes ClockLR was updated! // FIXME We need this assertion happen at compile time!
       static void tick() {

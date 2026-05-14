@@ -17,7 +17,7 @@
 #include "pinkyvolt_debug.hpp"
 //#include "pinkyvolt_debug_rx.hpp" // Pins used: 2(INT0),3(INT1),4
 
-ErrorTransmitterD5 errorTx; // Pin 5
+using ErrorTransmitter = ErrorTransmitterD5; // Pin 5
 
 InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true , ._ctx = {}};
 
@@ -53,20 +53,21 @@ void freezeAndDisplayEEPROMError() {
 }
   
 void setup() {
+  
   if (true) {
+    // DUMMY CODE!!!
     Serial.begin(9600);
     Serial.println("Hello from Dummy! I am Dum Dum...");
-    // DUMMY CODE!!!
     ErrorReceiver::setup();
     Serial.println(ErrorReceiver::getData());
     ClockLR::tick(); ErrorReceiver::tick();
 
-    errorTx.setup();
+    ErrorTransmitter::setup();
     // test that it works
     Serial.println(pinkyvolt::debug::Util::get_overflow_count());
     delay(3);
     Serial.println(pinkyvolt::debug::Util::get_overflow_count());
-    errorTx.tick();
+    ErrorTransmitter::tick();
   }
   
   uint8_t progNo = prefStore.load();
