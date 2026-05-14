@@ -1,63 +1,90 @@
 #include <Arduino.h>
+#include "clock.h"
 #include "rs485_client.h"
 #include "tm1637.h"
+#include "input_button.h"
 
-int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting
-int pin_TM1637_CLK = 3;
-int pin_TM1637_DIO = 4;
+int pin_RS485_DIR = 2; // LOW - Listening, HIGH - Transmitting
+int pin_TM1637_CLK = 4;
+int pin_TM1637_DIO = 5;
 
-bool powerOnRequest = false;
-bool fanOnRequest = false;
-bool heatRequest = false;
-bool fireAlarm = false; // in case fire is registered!
+InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePullup = true };
+InputButton::Def btnMinus = { .pinNo = 7, .isActiveHigh = false, .enablePullup = true };
+InputButton::Def btnPower = { .pinNo = 8, .isActiveHigh = false, .enablePullup = true };
 
-int digitsDisplayValue = 0;
-bool digitsDisplayShowDoubleDots = false;
+RS485Client::OutputData _out = {
+                                  .powerOnRequest = false,
+                                  .fanOnRequest = false,
+                                  .heatRequest = false,
+                                  .fireAlarm = false
+                               };
+unsigned int display_value = 0;
+bool display_doubleDots = false;
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(38400);
-  RS485Client::init(pin_RS485_dir);
+  RS485Client::init(pin_RS485_DIR, _out);
   TM1637::init(pin_TM1637_CLK, pin_TM1637_DIO);
-  TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
+  TM1637::updateDisplayWithError(3);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(2000);
+  TM1637::updateDisplay(display_value, display_doubleDots);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
+bool btnPlusLastState = true;
+bool btnMinusLastState = true;
+bool btnPowerLastState = true;
+int j = 85;
+
+uint8_t _c_b = 0;
+uint8_t _c_d = 0;
 void loop() {
-  RS485Client::loop();
-  testLoop();
-}
+  ClockLR::tick();
+  RS485Client::tick();
 
-int i = -1;
-unsigned long timerMark = millis();
-void testLoop() {
-  if (millis() - timerMark > 20000) {
-    timerMark = millis();
-    i++;
-    powerOnRequest = false; fanOnRequest = false; heatRequest = false; fireAlarm = false;
-    if (i % 4 == 0) powerOnRequest = true;
-    else if (i % 4 == 1) fanOnRequest = true;
-    else if (i % 4 == 2) heatRequest = true;
-    else if (i % 4 == 3) fireAlarm = true;
-    RS485Client::updateFlags(powerOnRequest, fanOnRequest, heatRequest, fireAlarm);
+  switch (_c_b) { // tick only one button at a time to make RS485 handling more smooth
+    case 0: InputButton::tick(btnPlus); break;
+    case 1: InputButton::tick(btnMinus); break;
+    case 2: InputButton::tick(btnPower); break;
+    default: _c_b = 0;
+  } _c_b++; _c_b = _c_b % 3;
+
+  if (InputButton::wasPressed(btnPlus)) {
+    j++;
+    if (j > 81) _out.heatRequest = false;
+  }
+  if (InputButton::wasPressed(btnMinus)) {
+    j--;
+    if (j < 80) _out.heatRequest = true;
+  }
+  if (InputButton::wasPressed(btnPower)) {
+    display_doubleDots = _out.powerOnRequest = true;
+  }
+  if (InputButton::wasReleased(btnPower)) {
+    display_doubleDots = _out.powerOnRequest = false;
+  }
+
+  if (++_c_d >= 5) {
+    display_value = j;
+    tick_display();
+    _c_d = 0;
   }
 }
 
 uint8_t state_tempSensors = 0;
 
-void loop_tempSensors() {
+void tick_tempSensors() {
+  // FIXME Implement it!
 }
 
-void loop_buttons() {
-}
-
-int digitsDisplayValue_displayed = digitsDisplayValue;
-bool digitsDisplayShowDoubleDots_displayed = digitsDisplayShowDoubleDots;
-void loop_digitsDisplay() {
-  if (digitsDisplayValue != digitsDisplayValue_displayed || digitsDisplayShowDoubleDots != digitsDisplayShowDoubleDots_displayed) {
-    TM1637::updateDisplay(digitsDisplayValue, digitsDisplayShowDoubleDots);
-    digitsDisplayValue_displayed = digitsDisplayValue;
-    digitsDisplayShowDoubleDots_displayed = digitsDisplayShowDoubleDots;
+int _display_value_displayed = display_value;
+bool _display_doubleDots_displayed = display_doubleDots;
+void tick_display() {
+  if (display_value != _display_value_displayed || display_doubleDots != _display_doubleDots_displayed) {
+    TM1637::updateDisplay(display_value, display_doubleDots);
+    _display_value_displayed = display_value;
+    _display_doubleDots_displayed = display_doubleDots;
   }
-}
-
-void loop_leds() {
 }

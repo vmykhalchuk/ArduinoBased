@@ -1,0 +1,16 @@
+When system starts - main fan and buzzer are cycled for 2sec.
+
+Failures:
+
+  Alarm
+    - Fire!
+        REQUIRED ACTION: SHUTDOWN HOUSE POWER IMMEDIATELY
+    - Contactor stuck
+        REQUIRED ACTION: SHUTDOWN HOUSE POWER IMMEDIATELY
+
+  Buzzing
+    - 1 long pulse and 5sec delay, repeating - One of Tempreature sensors broken
+    - 3 long pulses and 5sec delay, repeating - TRIACs Overheated!
+    - 5 long pulses and 5sec delay, repeating - Fire!
+
+    - 3 quick pulses once in 10 sec - Communication with remote lost

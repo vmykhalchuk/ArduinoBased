@@ -1,0 +1,6 @@
+GY-21 Pin	Arduino Nano Pin	Description
+----------------------------------------------------------
+VIN		3.3V (or 5V)		Power Supply
+GND		GND			Ground
+SCL		A5			I2C Clock
+SDA		A4			I2C Data

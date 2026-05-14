@@ -2,11 +2,12 @@
 #define INFO_PANEL_H
 
 #include <Arduino.h>
+#include "clock.h"
 #include "switch_pin.h"
 
 namespace InfoPanel {
 
-  void init(SwitchDef sw_Led1, SwitchDef sw_Buzzer);
+  void init(SwitchDef &sw_Led1, SwitchDef &sw_Buzzer);
 
   void setCommunicationError();
   void clearCommunicationError();
@@ -23,7 +24,7 @@ namespace InfoPanel {
   void setWarningCode(uint8_t f);
   void clearWarningCode(uint8_t f);
 
-  void loop();
+  void tick();
 }
 
 #endif

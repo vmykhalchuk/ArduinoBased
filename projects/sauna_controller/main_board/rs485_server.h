@@ -2,24 +2,35 @@
 #define RS485_SERVER_H
 
 #include <Arduino.h>
+#include "clock.h"
 
 namespace RS485Server {
 
-  enum Error { OK, NOT_ENOUGH_BYTES_RECEIVED, BAD_CRC, BAD_DATA };
+  const uint8_t SWITCH_RX_TO_TX_HOLD = 3;
+  const uint8_t SWITCH_TX_TO_RX_WAIT = 3;
+  const uint8_t PACKET_TRANSMISSION_MAX_TIME_MS = 30; // !!! depends on baud rate and bytes in single transmission packet
+
+  struct InputData {
+    bool powerOnRequest;
+    bool fanOnRequest;
+    bool heatRequest;
+    bool fireAlarm;
+  };
+
+  enum Error { OK, NOT_INITIALIZED, NOT_ENOUGH_BYTES_RECEIVED, BAD_CRC, BAD_DATA };
   Error popError();
   Error peekError();
   
   // dataRefreshedFlag
   //represents fact that new transmission received)
   // in other words - it signals caller code that new data
-  // is available to read from f1 - f4
-  // (doesn't necessarily mean the f1-f4 flags have changed)
+  // is available to read from InputData
+  // (doesn't necessarily mean the InputData flags have changed)
   bool peekDataRefreshedFlag();
   bool popDataRefreshedFlag();
-  extern bool f1, f2, f3, f4;
-
-  void init(int pinDir);
-  void loop();
+  
+  void init(int pinDir, InputData &inputData);
+  void tick();
 
   // Static is essentially private
 

@@ -3,53 +3,54 @@
 
 namespace RS485Server {
   
-  Error errorCode = OK;
+  Error _errorCode = OK;
 
   Error popError() {
-    Error e = errorCode;
-    errorCode = OK;
+    Error e = _errorCode;
+    _errorCode = OK;
     return e;
   }
   
   Error peekError() {
-    return errorCode;
+    return _errorCode;
   }
-
-  const unsigned long SWITCH_RX_TO_TX_HOLD = 30; //orig: 3
-  const unsigned long SWITCH_TX_TO_RX_WAIT = 20; //orig: 3
-  const unsigned long TRANSMISSION_MAX_TIME_MS = 100; //orig: 100 // FIXME reduce to 50
   
-  bool dataRefreshedFlag = false;
-  bool f1 = false, f2 = false;
-  bool f3 = false, f4 = false;
+  static bool _initialized = false;
+  static int _pinDir = 0;
 
-  static bool rs_pinDirIsSet = false;
-  static int rs_pinDir = 0;
+  static bool _dataRefreshedFlag = false;
+  static InputData *_in;
 
-  static bool serial_dataReceivingStarted = false;
-  static unsigned long timerMark = 0;
+  static bool _isDataReceivingStarted = false;
+  static unsigned long _timerMark = 0;
 
   bool peekDataRefreshedFlag() {
-    return dataRefreshedFlag;
+    return _dataRefreshedFlag;
   }
   bool popDataRefreshedFlag() {
-    bool res = dataRefreshedFlag;
-    dataRefreshedFlag = false;
+    bool res = _dataRefreshedFlag;
+    _dataRefreshedFlag = false;
     return res;
   }
     
-  void init(int pinDir) {
-    rs_pinDir = pinDir;
-    rs_pinDirIsSet = true;
+  void init(int pinDir, InputData &inputData) {
+    _pinDir = pinDir;
+    _initialized = true;
+    _in = &inputData;
+    
     switchToReceive();
-    pinMode(pinDir, OUTPUT);
+    pinMode(_pinDir, OUTPUT);
     delay(100); flushSerialRead();
   }
 
-  void loop() {
-    if (!serial_dataReceivingStarted && Serial.available()) {
-      serial_dataReceivingStarted = true;
-      timerMark = millis();
+  void tick() {
+    if (!_initialized) {
+      _errorCode = NOT_INITIALIZED;
+      return;
+    }
+    if (!_isDataReceivingStarted && Serial.available()) {
+      _isDataReceivingStarted = true;
+      _timerMark = ClockLR::now;
     }
     
     if (Serial.available() >= 3) {
@@ -59,7 +60,7 @@ namespace RS485Server {
       uint8_t receivedCRC = Serial.read();
       
       flushSerialRead(); // flush remaining bytes if present
-      serial_dataReceivingStarted = false;
+      _isDataReceivingStarted = false;
     
       uint8_t payload[2] = {b1, b2};
       uint8_t calcCRC = calculateCRC8(payload, 2);
@@ -70,20 +71,20 @@ namespace RS485Server {
       
       if (crcValid && dataValid) {
         responseByte = 0x66; // ACK
-        f4 = !(b1 & 0B1);
-        f3 = !(b1 & 0B01);
-        f2 = !(b1 & 0B001);
-        f1 = !(b1 & 0B0001);
-        dataRefreshedFlag = true;
+        _in->fireAlarm = ! (b1 & 1);
+        _in->heatRequest = ! ((b1 >> 1) & 1);
+        _in->fanOnRequest = ! ((b1 >> 2) & 1);
+        _in->powerOnRequest = ! ((b1 >> 3) & 1);
+        _dataRefreshedFlag = true;
         
       } else {
         
         if (!crcValid) {
           responseByte = 0x96; // CRC_ERR
-          errorCode = BAD_CRC;
+          _errorCode = BAD_CRC;
         } else {
           responseByte = 0x99; // DATA_ERR
-          errorCode = BAD_DATA;
+          _errorCode = BAD_DATA;
         }
       }
 
@@ -93,11 +94,11 @@ namespace RS485Server {
       switchToReceive();
     }
 
-    if (serial_dataReceivingStarted && (millis() - timerMark >= TRANSMISSION_MAX_TIME_MS)) {
+    if (_isDataReceivingStarted && ClockLR::isElapsed(_timerMark, PACKET_TRANSMISSION_MAX_TIME_MS)) {
       // error situation, ignore received data
-      errorCode = NOT_ENOUGH_BYTES_RECEIVED;
+      _errorCode = NOT_ENOUGH_BYTES_RECEIVED;
       flushSerialRead();
-      serial_dataReceivingStarted = false;
+      _isDataReceivingStarted = false;
     }
   }
 
@@ -109,11 +110,11 @@ namespace RS485Server {
 
   static void switchToReceive() {
     delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes
-    digitalWrite(rs_pinDir, LOW); // switch to Receiving mode
+    digitalWrite(_pinDir, LOW); // switch to Receiving mode
   }
   
   static void switchToTransmit() {
-    digitalWrite(rs_pinDir, HIGH); // switch to Transmission mode
+    digitalWrite(_pinDir, HIGH); // switch to Transmission mode
     delay(SWITCH_RX_TO_TX_HOLD); // let MAX IC to stabilize output
   }
   

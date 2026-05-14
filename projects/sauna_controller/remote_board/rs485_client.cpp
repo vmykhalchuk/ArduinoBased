@@ -4,72 +4,66 @@
 
 namespace RS485Client {
 
-  Error errorCode = OK;
+  Error _errorCode = OK;
 
   Error popError() {
-    Error e = errorCode;
-    errorCode = OK;
+    Error e = _errorCode;
+    _errorCode = OK;
     return e;
   }
   
   Error peekError() {
-    return errorCode;
+    return _errorCode;
   }
 
-  // Configuration
-  const unsigned long HEARTBEAT_INTERVAL = 6000; // orig: 3000
-  const unsigned long ACK_TIMEOUT = 800; //orig: 200
-  const unsigned long SWITCH_RX_TO_TX_HOLD = 30; //orig: 3
-  const unsigned long SWITCH_TX_TO_RX_WAIT = 20; //orig: 3
-  const unsigned long RETRY_DELAY_INTERVAL = 200; // orig: 50
-  const uint8_t MAX_RETRIES = 3;
-
   // Variables
-  static bool rs_pinDirIsSet = false;
-  static int rs_pinDir = 0;
+  static bool _pinDirIsSet = false;
+  static int _pinDir = 0;
   
-  static bool rs_f1=false, rs_f2=false, rs_f3=false, rs_f4=false;
+  OutputData *_out;
   
-  static State currentState = IDLE;
-  static unsigned long timerMark = 0;
-  static uint8_t retryCount = 0;
+  static State _currentState = IDLE;
+  static unsigned long _timerMark = 0;
+  static uint8_t _retryCount = 0;
 
-  void init(int pinDir) {
-    rs_pinDir = pinDir;
-    rs_pinDirIsSet = true;
+  void init(int pinDir, OutputData &outputData) {
+    _pinDir = pinDir;
+    _out = &outputData;
+
+    _pinDirIsSet = true;
     switchToTransmit(); // to prevent Main board from receiving random noise
-    pinMode(rs_pinDir, OUTPUT);
+    pinMode(_pinDir, OUTPUT);
     delay(100); flushSerialRead();
     changeState(IDLE);
   }
   
-  void updateFlags(bool f1, bool f2, bool f3, bool f4) {
-    rs_f1 = f1;
-    rs_f2 = f2;
-    rs_f3 = f2;
-    rs_f4 = f4;
-  }
-  
   static void switchToReceive() {
     delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes after previous transmission
-    digitalWrite(rs_pinDir, LOW); // switch to Receiving mode
+    digitalWrite(_pinDir, LOW); // switch to Receiving mode
   }
   
   static void switchToTransmit() {
-    digitalWrite(rs_pinDir, HIGH); // switch to Transmission mode
+    digitalWrite(_pinDir, HIGH); // switch to Transmission mode
     delay(SWITCH_RX_TO_TX_HOLD); // let MAX IC to stabilize output
   }
   
   static void sendPacket() {
-    if (!rs_pinDirIsSet) {
-      errorCode = ERROR_INIT;
+    if (!_pinDirIsSet) {
+      _errorCode = ERROR_INIT;
       return;
     }
   
-    uint8_t f1 = rs_f1 ? 1 : 0, f2 = rs_f2 ? 1 : 0, f3 = rs_f3 ? 1 : 0, f4 = rs_f4 ? 1 : 0;
+    uint8_t f1 = _out->powerOnRequest ? 1 : 0,
+            f2 = _out->fanOnRequest ? 1 : 0,
+            f3 = _out->heatRequest ? 1 : 0,
+            f4 = _out->fireAlarm ? 1 : 0;
     
-    uint8_t b1 = (f1 << 7) | (f2 << 6) | (f3 << 5) | (f4 << 4) | (!f1 << 3) | (!f2 << 2) | (!f3 << 1) | !f4;
-    uint8_t b2 = (!f1 << 7) | (!f2 << 6) | (!f3 << 5) | (!f4 << 4) | (f1 << 3) | (f2 << 2) | (f3 << 1) | f4;
+    uint8_t b1 = (f1 << 7) | (f2 << 6) | (f3 << 5) | (f4 << 4) |
+                 (!f1 << 3) | (!f2 << 2) | (!f3 << 1) | !f4;
+             
+    uint8_t b2 = (!f1 << 7) | (!f2 << 6) | (!f3 << 5) | (!f4 << 4) |
+                 (f1 << 3) | (f2 << 2) | (f3 << 1) | f4;
+                 
     uint8_t payload[2] = {b1, b2};
     uint8_t crc = calculateCRC8(payload, 2);
   
@@ -82,6 +76,7 @@ namespace RS485Client {
     Serial.write(b1);
     Serial.write(b2);
     Serial.write(crc);
+    // FIXME Unblock this part of code (flush is blocking operation) (use my_serial)
     Serial.flush(); // wait till physical transfer completes
     switchToReceive();
   }
@@ -93,20 +88,20 @@ namespace RS485Client {
   }
 
   static void changeState(State newState) {
-    currentState = newState;
-    timerMark = millis();
+    _currentState = newState;
+    _timerMark = ClockLR::now;
   }
   
-  void loop() {
-    switch(currentState) {
+  void tick() {
+    switch(_currentState) {
       case IDLE:
         if (Serial.available() > 0) {
           flushSerialRead();
-          changeState(currentState); // restart timer because of some noise on line
+          changeState(IDLE); // restart timer because of some noise on line
         } else {
-          if (millis() - timerMark >= HEARTBEAT_INTERVAL) {
+          if (ClockLR::isElapsed(_timerMark, HEARTBEAT_INTERVAL)) {
             sendPacket();
-            retryCount = 0;
+            _retryCount = 0;
             changeState(WAIT_ACK);
           }
         }
@@ -118,13 +113,13 @@ namespace RS485Client {
           if (uint8_t(response) == 0x66) {
             changeState(IDLE);
           } else {
-            errorCode = NON_ACK_RECEIVED;
+            _errorCode = NON_ACK_RECEIVED;
             changeState(RETRY_DELAY);
           }
-        } else if (millis() - timerMark >= ACK_TIMEOUT) {
-          errorCode = ACK_WAIT_TIMEOUT;
-          if (retryCount < MAX_RETRIES) {
-            retryCount++;
+        } else if (ClockLR::isElapsed(_timerMark, ACK_TIMEOUT)) {
+          _errorCode = ACK_WAIT_TIMEOUT;
+          if (_retryCount < MAX_RETRIES) {
+            _retryCount++;
             sendPacket();
             changeState(WAIT_ACK);
           } else {
@@ -137,7 +132,7 @@ namespace RS485Client {
   
       case RETRY_DELAY:
         flushSerialRead();
-        if (millis() - timerMark >= RETRY_DELAY_INTERVAL) {
+        if (ClockLR::isElapsed(_timerMark, RETRY_DELAY_INTERVAL)) {
           sendPacket();
           changeState(WAIT_ACK);
         }
