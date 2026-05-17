@@ -8,9 +8,9 @@ int pin_RS485_DIR = 2; // LOW - Listening, HIGH - Transmitting
 int pin_TM1637_CLK = 4;
 int pin_TM1637_DIO = 5;
 
-InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePullup = true };
-InputButton::Def btnMinus = { .pinNo = 7, .isActiveHigh = false, .enablePullup = true };
-InputButton::Def btnPower = { .pinNo = 8, .isActiveHigh = false, .enablePullup = true };
+InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePullup = true, ._ctx = {} };
+InputButton::Def btnMinus = { .pinNo = 7, .isActiveHigh = false, .enablePullup = true, ._ctx = {} };
+InputButton::Def btnPower = { .pinNo = 8, .isActiveHigh = false, .enablePullup = true, ._ctx = {} };
 
 RS485Client::OutputData _out = {
                                   .powerOnRequest = false,
@@ -79,7 +79,7 @@ void tick_tempSensors() {
   // FIXME Implement it!
 }
 
-int _display_value_displayed = display_value;
+unsigned int _display_value_displayed = display_value;
 bool _display_doubleDots_displayed = display_doubleDots;
 void tick_display() {
   if (display_value != _display_value_displayed || display_doubleDots != _display_doubleDots_displayed) {

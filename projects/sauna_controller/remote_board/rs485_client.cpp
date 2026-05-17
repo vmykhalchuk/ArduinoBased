@@ -1,5 +1,5 @@
 #include "rs485_client.h"
-#include "crc8.h"
+#include "crc8.hpp"
 
 
 namespace RS485Client {
@@ -26,6 +26,13 @@ namespace RS485Client {
   static unsigned long _timerMark = 0;
   static uint8_t _retryCount = 0;
 
+  void switchToReceive();
+  void switchToTransmit();
+  void sendPacket();
+  bool flushSerialRead();
+  // also resets timer
+  void changeState(State newState);
+
   void init(int pinDir, OutputData &outputData) {
     _pinDir = pinDir;
     _out = &outputData;
@@ -37,17 +44,17 @@ namespace RS485Client {
     changeState(IDLE);
   }
   
-  static void switchToReceive() {
+  void switchToReceive() {
     delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes after previous transmission
     digitalWrite(_pinDir, LOW); // switch to Receiving mode
   }
   
-  static void switchToTransmit() {
+  void switchToTransmit() {
     digitalWrite(_pinDir, HIGH); // switch to Transmission mode
     delay(SWITCH_RX_TO_TX_HOLD); // let MAX IC to stabilize output
   }
   
-  static void sendPacket() {
+  void sendPacket() {
     if (!_pinDirIsSet) {
       _errorCode = ERROR_INIT;
       return;
@@ -65,7 +72,7 @@ namespace RS485Client {
                  (f1 << 3) | (f2 << 2) | (f3 << 1) | f4;
                  
     uint8_t payload[2] = {b1, b2};
-    uint8_t crc = calculateCRC8(payload, 2);
+    uint8_t crc = CRC8::calculate(payload, 2);
   
     // Performance improvement:
     //   Use my_serial
@@ -81,13 +88,13 @@ namespace RS485Client {
     switchToReceive();
   }
 
-  static bool flushSerialRead() {
+  bool flushSerialRead() {
     bool res = Serial.available();
     while (Serial.available()) Serial.read();
     return res;
   }
 
-  static void changeState(State newState) {
+  void changeState(State newState) {
     _currentState = newState;
     _timerMark = ClockLR::now;
   }

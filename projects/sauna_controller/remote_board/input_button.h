@@ -6,7 +6,7 @@
 
 // example:
 // // define
-// InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePullup = true };
+// InputButton::Def btnPlus = { .pinNo = 6, .isActiveHigh = false, .enablePullup = true, ._ctx = {} };
 // // loop
 // InputButton::tick(btnPlus);
 // // check

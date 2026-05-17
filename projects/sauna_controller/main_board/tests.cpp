@@ -6,6 +6,8 @@ namespace Tests {
     while (Serial.available()) Serial.read();
   }
 
+  static constexpr bool TOGGLE_POWER_WHEN_TESTING = false;
+
   //            sw_InfoPanel_Buzzer, sw_fan_Main, sw_fan_TRIACs, sw_Heater_TRIACs,
   //            sw_Relay1_ALARM, sw_Relay2_HEAT_FAN, sw_Relay3_POWER, sw_Relay4
   void runTests(SwitchDef &buzzer, SwitchDef &fanMain, SwitchDef &fanTRIACs, SwitchDef &heaterTRIACs,
@@ -44,9 +46,11 @@ namespace Tests {
             break;
           case 5:
             delay(1000);
-            /*switchOn(rel3);*/ switchOn(rel4);
+            if (TOGGLE_POWER_WHEN_TESTING) switchOn(rel3);
+            switchOn(rel4);
             delay(3000);
-            /*switchOff(rel3);*/ switchOff(rel4);
+            if (TOGGLE_POWER_WHEN_TESTING) switchOff(rel3);
+            switchOff(rel4);
             break;
         }
     

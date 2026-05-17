@@ -50,6 +50,10 @@ namespace TM1637 {
   static bool _isInitialized = false;
   static int _pinClk;
   static int _pinDio;
+
+  void start();
+  void stop();
+  bool writeByte(uint8_t b);
   
   void init(int pinClk, int pinDio) {
     _pinClk = pinClk;
@@ -61,14 +65,14 @@ namespace TM1637 {
   
   // --- Low Level Communication ---
   
-  static void start() {
+  void start() {
     digitalWrite(_pinClk, HIGH);
     digitalWrite(_pinDio, HIGH);
     delayMicroseconds(5); // can be 2 (try it first), same for all 5us
     digitalWrite(_pinDio, LOW);
   }
   
-  static void stop() {
+  void stop() {
     digitalWrite(_pinClk, LOW);
     digitalWrite(_pinDio, LOW);
     delayMicroseconds(5);
@@ -77,7 +81,7 @@ namespace TM1637 {
     delayMicroseconds(5);
   }
   
-  static bool writeByte(uint8_t b) {
+  bool writeByte(uint8_t b) {
     for (uint8_t i = 0; i < 8; i++) {
       digitalWrite(_pinClk, LOW);
       digitalWrite(_pinDio, (b & 0x01) ? HIGH : LOW); // Send LSB first

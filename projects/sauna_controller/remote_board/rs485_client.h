@@ -28,19 +28,10 @@ namespace RS485Client {
   void init(int pinDir, OutputData &outputData);
 
   // State Machine Loop
-  enum State { IDLE, SENDING, WAIT_ACK, RETRY_DELAY };
+  enum State { IDLE, WAIT_ACK, RETRY_DELAY };
 
   void tick();
 
-  // static is essentially private
-  static void switchToReceive();
-  static void switchToTransmit();
-  static void sendPacket();
-
-  static bool flushSerialRead();
-
-  // also resets timer
-  static void changeState(State newState);
 }
 
 

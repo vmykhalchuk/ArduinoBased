@@ -32,17 +32,6 @@ namespace RS485Server {
   void init(int pinDir, InputData &inputData);
   void tick();
 
-  // Static is essentially private
-
-  static bool flushSerialRead();
-  
-  static void switchToReceive();
-  static void switchToTransmit();
-  
-  /*
-   * Validate if data packet conforms communication template (see communication.txt)
-   */
-  static bool isDataPacketValid(uint8_t b1, uint8_t b2);
 }
 
 

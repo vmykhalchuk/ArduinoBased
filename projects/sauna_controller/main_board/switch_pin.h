@@ -3,10 +3,16 @@
 
 #include <Arduino.h>
 
+/* 
+ *  Example initialization:
+ *    SwitchDef sw_InfoPanel_Buzzer = {.pinNo = A5, .isActiveHigh = IS_ACTIVE_HIGH, .isOn = false};
+ *    
+ *    SwitchDef sw_InfoPanel_Buzzer = {A5, IS_ACTIVE_HIGH, false};
+ */
 struct SwitchDef {
   const int pinNo;
   const bool isActiveHigh;
-  bool isOn;
+  bool isOn; // FIXME When initializing - this field is not taken into account!!!
 };
 
 const bool IS_ACTIVE_HIGH = true;

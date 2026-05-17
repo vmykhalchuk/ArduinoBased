@@ -1,5 +1,5 @@
 #include "rs485_server.h"
-#include "crc8.h"
+#include "crc8.hpp"
 
 namespace RS485Server {
   
@@ -33,6 +33,12 @@ namespace RS485Server {
     return res;
   }
     
+  bool flushSerialRead();  
+  void switchToReceive();
+  void switchToTransmit();
+  // Validate if data packet conforms communication template (see communication.txt)
+  bool isDataPacketValid(uint8_t b1, uint8_t b2);
+
   void init(int pinDir, InputData &inputData) {
     _pinDir = pinDir;
     _initialized = true;
@@ -63,7 +69,7 @@ namespace RS485Server {
       _isDataReceivingStarted = false;
     
       uint8_t payload[2] = {b1, b2};
-      uint8_t calcCRC = calculateCRC8(payload, 2);
+      uint8_t calcCRC = CRC8::calculate(payload, 2);
 
       uint8_t responseByte = 0;
       bool crcValid = calcCRC == receivedCRC;
@@ -102,23 +108,23 @@ namespace RS485Server {
     }
   }
 
-  static bool flushSerialRead() {
+  bool flushSerialRead() {
     bool r = Serial.available();
     while (Serial.available()) Serial.read();
     return r;
   }
 
-  static void switchToReceive() {
+  void switchToReceive() {
     delay(SWITCH_TX_TO_RX_WAIT); // wait before line stabilizes
     digitalWrite(_pinDir, LOW); // switch to Receiving mode
   }
   
-  static void switchToTransmit() {
+  void switchToTransmit() {
     digitalWrite(_pinDir, HIGH); // switch to Transmission mode
     delay(SWITCH_RX_TO_TX_HOLD); // let MAX IC to stabilize output
   }
   
-  static bool isDataPacketValid(uint8_t b1, uint8_t b2) {
+  bool isDataPacketValid(uint8_t b1, uint8_t b2) {
     uint8_t b1H = b1 >> 4;
     uint8_t b1LInv = ~b1 & 0x0f;
     uint8_t b1Inv = ~b1;
