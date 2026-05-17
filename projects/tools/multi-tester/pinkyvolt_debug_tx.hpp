@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <util/atomic.h>
+#include "crc8.hpp"
 #include "clock.h"
 
 namespace pinkyvolt::debug::tx {
@@ -43,14 +44,14 @@ namespace pinkyvolt::debug::tx {
  *  
  */
 
-
-  //enum CommunicationError : uint8_t {
-  constexpr uint8_t _CMERR__OK          = 0x00;
-  constexpr uint8_t _CMERR__BAD_CRC     = 0x02;
-  constexpr uint8_t _CMERR__ALG_TXOUT   = 0x10;
-  constexpr uint8_t _CMERR__ALG_01      = 0x20;
-  constexpr uint8_t _CMERR__ALG_02      = 0x40;
-  constexpr uint8_t _CMERR__STALL       = 0x80;
+  // Communication Errors
+  constexpr uint8_t CMERR__OK               = 0x00;
+  constexpr uint8_t CMERR__BAD_CRC          = 0x01; // Invalid CRC
+  constexpr uint8_t CMERR__PROTOCOL_FAILURE = 0x02; // Protocol failure
+  constexpr uint8_t CMERR__STALL            = 0x02; // Communication Stalled
+  constexpr uint8_t CMERR__ALG_TXOUT        = 0x10; // Algorithm Error When Transiting TX Out
+  constexpr uint8_t CMERR__ALG_BAD_STATE    = 0x20; // Algorithm Error: Unexpected or unregistered state!
+  
 
                              //   A A P _
                              //  _H_L_U_Z
@@ -63,16 +64,20 @@ namespace pinkyvolt::debug::tx {
                       //        10->set as input          11->set as output
   constexpr uint8_t _TRANSITION_MAP[] = {__Z_to__, _PU_to__, _AL_to__, _AH_to__};
 
-  template <uint8_t PORTD_PIN>
+  template <uint8_t PORTD_PIN, uint8_t SIZE>
   class OneWireErrorTransmitter final {
     
     private:
+      static constexpr bool __debug = true;
+
+      static constexpr uint8_t _SYS_BYTES = 1; // FIXME Implement this! (See Receiver for details)
+
+      static_assert(SIZE >=1 && SIZE <= 30, "SIZE must be in range [1..30]");
+      static_assert(((SIZE + _SYS_BYTES)<<3) <= 0xFF, "SIZE+sysBytes must be addressable with single byte");
+
+      static_assert((PORTD_PIN <= 7), "PORTD_PIN must be within 0..7 range!");
 
       OneWireErrorTransmitter() {};
-
-      static constexpr bool __debug = true;
-    
-      static_assert((PORTD_PIN <= 7), "PORTD_PIN must be within 0..7 range!");
 
       static constexpr uint8_t _MASK = 1<<PORTD_PIN;
 
@@ -95,7 +100,7 @@ namespace pinkyvolt::debug::tx {
         _CRIT__COMMERROR                    = _G_CRIT | 1,
         _CRIT__LONG_WAIT                    = _G_CRIT | 2,
         _CRIT__ALG_ERROR_TXOUT              = _G_CRIT | 0xC, // Algorithimc error - TX Out
-        _CRIT__ALG_ERROR__01                = _G_CRIT | 0xD, // Algorithimc error - unhandled logic state
+        _CRIT__ALG_ERR__BAD_STATE           = _G_CRIT | 0xD, // Algorithimc error - Unexpected or Not registered state
 
         // -- HANDSHAKE --
         _HS__S1                             = _G_HS | 1,
@@ -129,7 +134,7 @@ namespace pinkyvolt::debug::tx {
       static uint8_t _skipCycleTmr0;
       static uint8_t _skipCycleTmr0p1;
 
-      static FSMState _if_L_then;
+      static FSMState _if_L_then; // FIXME => nextStateIfLow
       static FSMState _if_H_then;
       
       static FSMState _if_L_then__saved4waitFullCycle;
@@ -273,13 +278,12 @@ namespace pinkyvolt::debug::tx {
       //inline static void tx_AH2Z() IMPOSSIBLE With single transition
       
 
-      static volatile uint64_t _data;
+      static volatile uint8_t _data[SIZE + _SYS_BYTES];
+      static volatile uint8_t _commError;
 
-      static uint64_t _writingData;
+      static uint8_t _writingData[SIZE + _SYS_BYTES];
       static uint8_t _readingData;
       static uint8_t _bitNo;
-
-      static uint8_t _commError;
 
     public:
 
@@ -289,16 +293,7 @@ namespace pinkyvolt::debug::tx {
         //     2) ignore it - since we are setting bit - set after set => same result
         //     3) [BEST] make it configurable (one of above three solutions)
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-          _data |= (uint64_t) 1 << (errorFlag & 0x3F);
-          // TODO [PERFORMANCE] Replace with 8 bytes array - firstly will be more flexible, secondly is much faster
-          //  uint8_t _data[8];
-          //  _data[(_bitNo >> 3)&0x7] |= 1 << (errorFlag & 0x7);
-        }
-      }
-
-      static void registerErrorsInBulk(uint64_t errorFlagsSet) {
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-          _data |= errorFlagsSet;
+          _data[errorFlag>>3] |= 1 << (errorFlag & 0x7);
         }
       }
 
@@ -336,7 +331,7 @@ namespace pinkyvolt::debug::tx {
             }
           } else {
             bool isLow = isDPinLow();
-            _SPL_lineStateChangeHandler(isLow);
+            _handleLineStateChangeWithStallPrevention(isLow);
           }
         }
       }
@@ -352,31 +347,33 @@ namespace pinkyvolt::debug::tx {
       static FSMState _stallStateIfL, _stallStateIfH;
       static FSMState _whenStallRevertTo;
       static uint8_t _stallCounter;
-  
+
       inline static void __resetStallPreventionLogic() {
+        // FIXME [PERFROMANCE] We might remove these variables, and leave only counter
+        //      all we have to do - is add a call to this function from _switchToLH() and _waitFullCycleAndSwitchToLH()
         _stallStateIfL = _if_L_then;
         _stallStateIfH = _if_H_then;
         _stallCounter = 0;
       }
 
       __attribute__((always_inline))
-      inline static void _SPL_lineStateChangeHandler(bool isLow) {
+      inline static void _handleLineStateChangeWithStallPrevention(bool isLow) {
         // Stall Prevention Logic
         if (_stallStateIfL == _if_L_then && _stallStateIfH == _if_H_then) {
           if (++_stallCounter > 20) {
             // Stalled
-            _commError |= _CMERR__STALL;
+            _commError |= CMERR__STALL;
             _waitFullCycleAndSwitchToLH(_whenStallRevertTo, _whenStallRevertTo);
           }
         } else {
           __resetStallPreventionLogic();
         }
         
-        _lineStateChangeHandler(isLow);
+        _handleLineStateChange(isLow);
       }
 
       __attribute__((always_inline))
-      inline static void _lineStateChangeHandler(bool isLow) {
+      inline static void _handleLineStateChange(bool isLow) {
         FSMState state = isLow ? _if_L_then : _if_H_then;
         uint8_t group = state & 0xF0;
 
@@ -390,25 +387,26 @@ namespace pinkyvolt::debug::tx {
           _handleReadingState(state);
 
         } else {
-           _switchToLH(_CRIT__ALG_ERROR__01, _CRIT__ALG_ERROR__01);
+           _switchToLH(_CRIT__ALG_ERR__BAD_STATE, _CRIT__ALG_ERR__BAD_STATE);
         }
       }
 
       __attribute__((always_inline))
       inline static void _handleCritState(FSMState state) {
         if (_CRIT__COMMERROR == state) {// Line == <ANY>
+          _commError |= CMERR__PROTOCOL_FAILURE;
           setup();
 
         } else if (_CRIT__ALG_ERROR_TXOUT == state) {// Line == <ANY>
-          _commError |= _CMERR__ALG_TXOUT;
+          _commError |= CMERR__ALG_TXOUT;
           _switchToLH(_CRIT__COMMERROR, _CRIT__COMMERROR);
 
-        } else if (_CRIT__ALG_ERROR__01 == state) {// Line == <ANY>
-          _commError |= _CMERR__ALG_01;
+        } else if (_CRIT__ALG_ERR__BAD_STATE == state) {// Line == <ANY>
+          _commError |= CMERR__ALG_BAD_STATE;
           _switchToLH(_CRIT__COMMERROR, _CRIT__COMMERROR);
 
         } else {
-          _switchToLH(_CRIT__ALG_ERROR__01, _CRIT__ALG_ERROR__01);
+          _switchToLH(_CRIT__ALG_ERR__BAD_STATE, _CRIT__ALG_ERR__BAD_STATE);
         }
       }
 
@@ -436,7 +434,7 @@ namespace pinkyvolt::debug::tx {
           _switchToLH(_WR_START, _CRIT__COMMERROR);
 
         } else {
-           _switchToLH(_CRIT__ALG_ERROR__01, _CRIT__ALG_ERROR__01);
+           _switchToLH(_CRIT__ALG_ERR__BAD_STATE, _CRIT__ALG_ERR__BAD_STATE);
         }
       }
 
@@ -448,18 +446,15 @@ namespace pinkyvolt::debug::tx {
             // TODO [OPTIMIZATION] Make it tunable over constexpr boolean if we write directly from _data or copy first (also will disable atomicity at the same time)
             //                        at the start of method defineL uint16_t &dRef = _writingData; <-- or dRef = _data - based on constexpr
             //                        and use dRef instead of _writingData
-            _writingData = _data;
-            _data = 0; // reset - if writing fails we revert _data with _writingData
+            _prepareWritingData(); // reset - if writing fails we revert _data with _writingData
           }
           _bitNo = 0; // start from bit 0
           _whenStallRevertTo = _RD_ERROR;
           _switchToLH(_WR_S0, _RD_ERROR);
           
         } else if (_WR_S0 == state) {           // Line == M (PD+PU)
-          // FIXME [PERFORMANCE]
-          // check : _writingData & 1
-          // shift : _writingData >> 1 in _WR_S3 step
-          if (_writingData & (1 << _bitNo)) {
+          bool isHigh = _writingData[_bitNo >> 3] & (1<<(_bitNo&7));
+          if (!isHigh) {
             // Write 0
             _tx_PU2Z();                         // TX=>Z; Line=L (PD+Z)
             _waitFullCycleAndSwitchToLH(_WR_S1, _RD_ERROR);
@@ -479,7 +474,7 @@ namespace pinkyvolt::debug::tx {
           
         } else if (_WR_S3 == state) {           // Line == M (PD+PU)
           _bitNo++;
-          if (_bitNo < 64) {
+          if (_bitNo < (SIZE<<3)) {
             _switchToLH(_WR_S0, _RD_ERROR);
           } else {
             // last bit was written - exit
@@ -487,7 +482,7 @@ namespace pinkyvolt::debug::tx {
           }
           
         } else {
-           _switchToLH(_CRIT__ALG_ERROR__01, _CRIT__ALG_ERROR__01);
+           _switchToLH(_CRIT__ALG_ERR__BAD_STATE, _CRIT__ALG_ERR__BAD_STATE);
         }
       }
       
@@ -536,69 +531,78 @@ namespace pinkyvolt::debug::tx {
               _waitFullCycleAndSwitchToLH(_SPEC__WAITING_FOR_HANDSHAKE, _SPEC__WAITING_FOR_HANDSHAKE);
             } else {
               // Invalid CRC data
-              _commError |= _CMERR__BAD_CRC;
+              _commError |= CMERR__BAD_CRC;
               _switchToLH(_RD_ERROR, _RD_ERROR);
             }
           }
           
         } else if (_RD_ERROR == state) {        // Line == <ANY>
-          registerErrorsInBulk(_writingData);
+          _recoverDataBack();
           _whenStallRevertTo = _CRIT__COMMERROR;
           _switchToLH(_CRIT__COMMERROR, _CRIT__COMMERROR);
 
         } else {
-           _switchToLH(_CRIT__ALG_ERROR__01, _CRIT__ALG_ERROR__01);
+           _switchToLH(_CRIT__ALG_ERR__BAD_STATE, _CRIT__ALG_ERR__BAD_STATE);
         }
         
       }
 
       inline static bool _validateData() {
-        uint8_t res = 0;
-       // FIXME Implement proper logic below (use CRC8)
-       uint64_t wd = _writingData;
-        for (int i = 0; i < 8; i++) {
-          res ^= wd & 0xFF;
-          wd = wd >> 8;
+        uint8_t crc8 = CRC8::calculate(_writingData, SIZE);
+        return _readingData == crc8;
+      }
+
+      inline static void _prepareWritingData() {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+          for (uint8_t i = 0; i < SIZE; i++) {
+            _writingData[i] = _data[i];
+            _data[i] = 0;
+          }
         }
-        return res == _readingData;
       }
   
+      inline static void _recoverDataBack() {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+          for (uint8_t i = 0; i < SIZE; i++) {
+            _data[i] = _writingData[i];
+          }
+        }
+      }
+
   };
 
-  template <uint8_t P>
-  uint8_t OneWireErrorTransmitter<P>::_skipCycleTmr0 = 0;
-  template <uint8_t P>
-  uint8_t OneWireErrorTransmitter<P>::_skipCycleTmr0p1 = 0;
+  template <uint8_t P, uint8_t S>
+  uint8_t OneWireErrorTransmitter<P, S>::_skipCycleTmr0 = 0;
+  template <uint8_t P, uint8_t S>
+  uint8_t OneWireErrorTransmitter<P, S>::_skipCycleTmr0p1 = 0;
 
-  template <uint8_t P>
-  typename OneWireErrorTransmitter<P>::FSMState OneWireErrorTransmitter<P>::_if_L_then = OneWireErrorTransmitter<P>::_NOOP;
-  template <uint8_t P>
-  typename OneWireErrorTransmitter<P>::FSMState OneWireErrorTransmitter<P>::_if_H_then = OneWireErrorTransmitter<P>::_NOOP;
-  template <uint8_t P>
-  typename OneWireErrorTransmitter<P>::FSMState OneWireErrorTransmitter<P>::_if_L_then__saved4waitFullCycle = OneWireErrorTransmitter<P>::_NOOP;
+  template <uint8_t P, uint8_t S>
+  typename OneWireErrorTransmitter<P, S>::FSMState OneWireErrorTransmitter<P, S>::_if_L_then = OneWireErrorTransmitter<P, S>::_NOOP;
+  template <uint8_t P, uint8_t S>
+  typename OneWireErrorTransmitter<P, S>::FSMState OneWireErrorTransmitter<P, S>::_if_H_then = OneWireErrorTransmitter<P, S>::_NOOP;
+  template <uint8_t P, uint8_t S>
+  typename OneWireErrorTransmitter<P, S>::FSMState OneWireErrorTransmitter<P, S>::_if_L_then__saved4waitFullCycle = OneWireErrorTransmitter<P, S>::_NOOP;
 
-  template <uint8_t P>
-  volatile uint64_t OneWireErrorTransmitter<P>::_data = 0;
-  template <uint8_t P>
-  uint64_t OneWireErrorTransmitter<P>::_writingData = 0;
-  template <uint8_t P>
-  uint8_t OneWireErrorTransmitter<P>::_readingData = 0;
-  template <uint8_t P>
-  uint8_t OneWireErrorTransmitter<P>::_bitNo = 0;
+  template <uint8_t P, uint8_t S>
+  volatile uint8_t OneWireErrorTransmitter<P, S>::_data[S + OneWireErrorTransmitter<P, S>::_SYS_BYTES] = {};
+  template <uint8_t P, uint8_t S>
+  volatile uint8_t OneWireErrorTransmitter<P, S>::_commError = CMERR__OK;
 
-  template <uint8_t P>
-  uint8_t OneWireErrorTransmitter<P>::_commError = _CMERR__OK;
+  template <uint8_t P, uint8_t S>
+  uint8_t OneWireErrorTransmitter<P, S>::_writingData[S + OneWireErrorTransmitter<P, S>::_SYS_BYTES] = {};
+  template <uint8_t P, uint8_t S>
+  uint8_t OneWireErrorTransmitter<P, S>::_readingData = 0;
+  template <uint8_t P, uint8_t S>
+  uint8_t OneWireErrorTransmitter<P, S>::_bitNo = 0;
 
-  //template <uint8_t P>
-  //uint8_t OneWireErrorTransmitter<P>::_stallState = false;
-  template <uint8_t P>
-  typename OneWireErrorTransmitter<P>::FSMState OneWireErrorTransmitter<P>::_stallStateIfL = OneWireErrorTransmitter<P>::_NOOP;
-  template <uint8_t P>
-  typename OneWireErrorTransmitter<P>::FSMState OneWireErrorTransmitter<P>::_stallStateIfH = OneWireErrorTransmitter<P>::_NOOP;
-  template <uint8_t P>
-  typename OneWireErrorTransmitter<P>::FSMState OneWireErrorTransmitter<P>::_whenStallRevertTo = OneWireErrorTransmitter<P>::_NOOP;
-  template <uint8_t P>
-  uint8_t OneWireErrorTransmitter<P>::_stallCounter = 0;
+  template <uint8_t P, uint8_t S>
+  typename OneWireErrorTransmitter<P, S>::FSMState OneWireErrorTransmitter<P, S>::_stallStateIfL = OneWireErrorTransmitter<P, S>::_NOOP;
+  template <uint8_t P, uint8_t S>
+  typename OneWireErrorTransmitter<P, S>::FSMState OneWireErrorTransmitter<P, S>::_stallStateIfH = OneWireErrorTransmitter<P, S>::_NOOP;
+  template <uint8_t P, uint8_t S>
+  typename OneWireErrorTransmitter<P, S>::FSMState OneWireErrorTransmitter<P, S>::_whenStallRevertTo = OneWireErrorTransmitter<P, S>::_NOOP;
+  template <uint8_t P, uint8_t S>
+  uint8_t OneWireErrorTransmitter<P, S>::_stallCounter = 0;
 
 
 /*
@@ -636,13 +640,7 @@ namespace pinkyvolt::debug::tx {
 
 }
 
-using ErrorTransmitterD0 = pinkyvolt::debug::tx::OneWireErrorTransmitter<0>;
-using ErrorTransmitterD1 = pinkyvolt::debug::tx::OneWireErrorTransmitter<1>;
-using ErrorTransmitterD2 = pinkyvolt::debug::tx::OneWireErrorTransmitter<2>;
-using ErrorTransmitterD3 = pinkyvolt::debug::tx::OneWireErrorTransmitter<3>;
-using ErrorTransmitterD4 = pinkyvolt::debug::tx::OneWireErrorTransmitter<4>;
-using ErrorTransmitterD5 = pinkyvolt::debug::tx::OneWireErrorTransmitter<5>;
-using ErrorTransmitterD6 = pinkyvolt::debug::tx::OneWireErrorTransmitter<6>;
-using ErrorTransmitterD7 = pinkyvolt::debug::tx::OneWireErrorTransmitter<7>;
+template<uint8_t PORTD_PIN, uint8_t SIZE>
+using ErrorTransmitter = pinkyvolt::debug::tx::OneWireErrorTransmitter<PORTD_PIN, SIZE>;
 
 #endif

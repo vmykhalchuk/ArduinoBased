@@ -15,9 +15,10 @@
 #include "input_button.h"
 #include "kh2441ef.h" // Pins used 5,6,7,8,9,10
 #include "pinkyvolt_debug.hpp"
-//#include "pinkyvolt_debug_rx.hpp" // Pins used: 2(INT0),3(INT1),4
 
-using ErrorTransmitter = ErrorTransmitterD5; // Pin 5
+using ErrorTx = ErrorTransmitter<5,8>; // Pin 5
+using ErrorRx = ErrorReceiver<4,8>; // Pins used: 2(INT0),3(INT1),4
+
 
 InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true , ._ctx = {}};
 
@@ -58,16 +59,17 @@ void setup() {
     // DUMMY CODE!!!
     Serial.begin(9600);
     Serial.println("Hello from Dummy! I am Dum Dum...");
-    ErrorReceiver::setup();
-    Serial.println(ErrorReceiver::getData());
-    ClockLR::tick(); ErrorReceiver::tick();
+    ErrorRx::setup();
+    Serial.println(ErrorRx::getData(0));
+    ClockLR::tick();
+    ErrorRx::tick();
 
-    ErrorTransmitter::setup();
+    ErrorTx::setup();
     // test that it works
     Serial.println(pinkyvolt::debug::Util::get_overflow_count());
     delay(3);
     Serial.println(pinkyvolt::debug::Util::get_overflow_count());
-    ErrorTransmitter::tick();
+    ErrorTx::tick();
   }
   
   uint8_t progNo = prefStore.load();

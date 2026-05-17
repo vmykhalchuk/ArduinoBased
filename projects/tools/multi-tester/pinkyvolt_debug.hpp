@@ -17,6 +17,33 @@ extern volatile long unsigned int timer0_overflow_count;
 namespace pinkyvolt::debug {
 
   uint8_t val = *(volatile uint8_t*)&timer0_overflow_count;
+
+  // SPEED_MODE - optimized for speed - additional cost in Program memory
+  template<bool SPEED_MODE>
+  class StateFlags final {
+    private:
+      StateFlags() {};
+      static uint8_t _f;
+
+      static constexpr uint8_t _ERROR = 1<<0;
+      static constexpr uint8_t _ERROR_MASK = ~_ERROR;
+    public:
+
+      bool isError() {
+        return _f & _ERROR;
+      }
+      void setError() {
+        _f |= _ERROR;
+      }
+      void clearError() {
+        if (SPEED_MODE) {
+          _f &= _ERROR_MASK;
+        } else {
+          _f &= ~_ERROR;
+        }
+      }
+    
+  };
   
   class Util final {
     public:

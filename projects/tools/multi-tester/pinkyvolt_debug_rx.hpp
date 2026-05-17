@@ -3,15 +3,31 @@
 
 #include <Arduino.h>
 #include <util/atomic.h>
+#include "crc8.hpp"
 #include "clock.h"
 
+// FIXME Major rework:
+//     1) We need to have Receiver act extremely fast, solution: have it split by two Arduino:
+//            a) First Arduino monitors two pins (no interrupts, very tight loop)
+//                  -) monitor that signal is transitioning H->L (via M) - and prevents false trigger on M
+//                  -) sends data via High speed Serial communication
+//                  -) if data comes too fast - slows down Transmitter by stopping at handshake, so Transmitter goes into wait loop
+//            b) Receives data via Serial port on high speed
+//                  -) Sends all data in HEX Fromat - to make it human readable
+//                      S:XX XX XX XX XX XX XX XX XX XX XX
+//                      R:XX XX
 namespace pinkyvolt::debug::rx {
 
-  template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD>
+  template <uint8_t PORTD_PIN, uint8_t PORTD_PIN_CMP, uint8_t PORTD_PIN_PD, uint8_t SIZE>
   class OneWireErrorReceiver final {
     private:
       OneWireErrorReceiver() {};
 
+      static constexpr uint8_t _SYS_BYTES = 1; // FIXME Implement this logic. 
+
+      static_assert(SIZE >= 1 && SIZE <= 30, "SIZE must be in range [1..30]");
+      static_assert(((SIZE + _SYS_BYTES)<<3) <= 0xFF, "SIZE+sysBytes must be addressable with single byte");
+      
       static_assert((PORTD_PIN == 2), "PORTD_PIN must be 2");
       static_assert((PORTD_PIN_CMP == 3), "PORTD_PIN must be 3");
 
@@ -48,9 +64,11 @@ namespace pinkyvolt::debug::rx {
         _SM_READ__S1                        = _G_RD | 1,
         _SM_READ__S2                        = _G_RD | 2,
 
+        _SM_WRITE_S0                        = _G_WR | 0,
+
         // this error happens when wrong D2,D3 input (totally unexpected and most likely caused by hardware failure)
-        _SM_RARE__ERROR_INPUT_COMBINATION   = _G_OTH | 0,
-        _SM_RARE__ALG_ERROR_UNHANDLED_STATE = _G_OTH | 1,
+        _SM_OTH__ERROR_INPUT_COMBINATION    = _G_OTH | 0,
+        _SM_OTH__ALG_ERROR_UNHANDLED_STATE  = _G_OTH | 1,
       };
 
       inline static void __setDPinToInput()  { asm volatile ("cbi %0, %1" : : "I" (_SFR_IO_ADDR(DDRD)),  "I" (PORTD_PIN) : "memory"); }
@@ -62,6 +80,7 @@ namespace pinkyvolt::debug::rx {
       inline static void __setDPinPDToOutput() { asm volatile ("sbi %0, %1" : : "I" (_SFR_IO_ADDR(DDRD)),  "I" (PORTD_PIN_PD) : "memory"); }
       inline static void __setDPinPDToInput()  { asm volatile ("cbi %0, %1" : : "I" (_SFR_IO_ADDR(DDRD)),  "I" (PORTD_PIN_PD) : "memory"); }
       inline static void __setDPinPDToLow()    { asm volatile ("cbi %0, %1" : : "I" (_SFR_IO_ADDR(PORTD)), "I" (PORTD_PIN_PD) : "memory"); }
+      inline static void __setDPinPDToHigh()   { asm volatile ("sbi %0, %1" : : "I" (_SFR_IO_ADDR(PORTD)), "I" (PORTD_PIN_PD) : "memory"); }
 
       enum LineState : uint8_t {
         // NOTE: CMP has 1 when voltage is below its threshold (0.15V) and 0 when above
@@ -108,15 +127,27 @@ namespace pinkyvolt::debug::rx {
         // Cmp Pin to read (no pull-up)
         __setDPinCmpToInput();
         __setDPinCmpToLow();
-        // Disable PD
-        __setDPinPDToInput();
+
+        // Enable PD
+        __setDPinPDToOutput();
         __setDPinPDToLow();
       }
+      
       inline static void _activatePD() {
         __setDPinPDToOutput();
       }
       inline static void _deactivatePD() {
         __setDPinPDToInput();
+      }
+
+      inline static void _suspendCommunication() {
+        _activatePD();
+        __setDPinPDToHigh();
+      }
+      
+      inline static void _resumeCommunication() {
+        __setDPinPDToLow();
+        _activatePD();
       }
 
       //  --- STATUS FLAGS FUNCTIONALITY  ---
@@ -147,10 +178,11 @@ namespace pinkyvolt::debug::rx {
 
       // --- MAIN REGISTERS ---
 
-      static volatile uint8_t _receivedData;
+      static volatile uint8_t _receivedData[SIZE + _SYS_BYTES];
       
-      static uint8_t _readingDataBuf; // FIXME We expect 64 bits! Use 8 bytes array!
+      static uint8_t _readingDataBuf[SIZE + _SYS_BYTES];
       static uint8_t _readingDataBit;
+      static uint8_t _writingDataBuf[2];
 
       static LineThenState _lineTransitions;
       static uint8_t* const _lineTransitionsAsArr;
@@ -165,44 +197,72 @@ namespace pinkyvolt::debug::rx {
       // --- MAIN HELPING FUNCTIONS ---
       
       __attribute__((always_inline))
-      static inline void __lineExpectsLMH(FSMState _l, FSMState _m, FSMState _h) {
+      static inline void __whenLineLMHThen(FSMState _l, FSMState _m, FSMState _h) {
         _lineTransitions._l = _l;
         _lineTransitions._m = _m;
         _lineTransitions._h = _h;
       }
 
+      static inline void __whenLineLThen(FSMState l) {
+        _lineTransitions._l = l;
+        _lineTransitions._m = _SM_CRIT__COMMERROR;
+        _lineTransitions._h = _SM_CRIT__COMMERROR;
+      }
+      static inline void __whenLineMThen(FSMState m) {
+        _lineTransitions._l = _SM_CRIT__COMMERROR;
+        _lineTransitions._m = m;
+        _lineTransitions._h = _SM_CRIT__COMMERROR;
+      }
+      static inline void __whenLineHThen(FSMState h) {
+        _lineTransitions._l = _SM_CRIT__COMMERROR;
+        _lineTransitions._m = _SM_CRIT__COMMERROR;
+        _lineTransitions._h = h;
+      }
+      
       __attribute__((always_inline))
-      static inline void __lineExpectsALL(FSMState _s) {
-        __lineExpectsLMH(_s, _s, _s);
+      static inline void __whenLineAnyThen(FSMState s) {
+        _lineTransitions._l = s;
+        _lineTransitions._m = s;
+        _lineTransitions._h = s;
       }
 
       // --- MAIN LOGIC FUNCTION --
 
       static void _restartConnection() {
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-          //__lineExpectsLMH(_SM_NOP, _SM_NOP, _SM_NOP);
+          //__whenLineAnyThen(_SM_NOP);
           __clearSF(_SF_IS_CONNECTED);
           __clearSF(_SF_IS_ERROR);
-          //delay(1);
-          __lineExpectsLMH(_SM_NOP, _SM_CRIT__WAITING_FOR_CONNECTION, _SM_CRIT__COMMERROR);
-          _activatePD();
+          //delay(1); // no delays needed, line transitions smoothly because of high resistances involved, and no jitterring because of hysteresis in circuits
+          __whenLineMThen(_SM_CRIT__WAITING_FOR_CONNECTION);
+          _resumeCommunication();
         }
       }
 
     public:
 
       static void setup() {
-        _lineTransitions._u = _SM_RARE__ERROR_INPUT_COMBINATION;
+        _lineTransitions._u = _SM_OTH__ERROR_INPUT_COMBINATION;
         _initializePorts();
 
         _restartConnection();
+        //delay(1);
         
         attachInterrupt(digitalPinToInterrupt(PORTD_PIN), _interruptHandler, CHANGE);
         attachInterrupt(digitalPinToInterrupt(PORTD_PIN_CMP), _interruptHandler, CHANGE);
       }
 
     private:
+
+      /*static volatile bool __justTransitioned = false;
       
+      __attribute__((always_inline))
+      static void inline _interruptHandlerWithIntermidiateTransitionDetection() {
+        if (__justTransitioned) {
+          // start timer 1 and leave
+        }
+      }*/
+
       __attribute__((always_inline))
       static void inline _interruptHandler() {
         // clear WDT to prevent it from restarting connection
@@ -220,11 +280,11 @@ namespace pinkyvolt::debug::rx {
           } else if (group == _G_RD) {
             _handleReadStates(state, ls);
           } else if (group == _G_WR) {
-            // FIXME Implement it!
+            _handleWriteStates(state, ls);
           } else if (group == _G_OTH) {
             // FIXME Implement it!
           } else {
-            __lineExpectsALL(_SM_RARE__ALG_ERROR_UNHANDLED_STATE);
+            __whenLineAnyThen(_SM_OTH__ALG_ERROR_UNHANDLED_STATE);
           }
         }
       }
@@ -232,15 +292,15 @@ namespace pinkyvolt::debug::rx {
       __attribute__((always_inline))
       static void inline _handleCritStates(uint8_t state) {
         // FIXME Order IFs
-        if (state == _SM_CRIT__WAITING_FOR_CONNECTION) {                    // Line is M
+        if (state == _SM_CRIT__WAITING_FOR_CONNECTION) {                        // Line is M
           // Tx is connected
           __setSF(_SF_IS_CONNECTED);
-          __lineExpectsLMH(_SM_HANDSHAKE__S0, _SM_NOP, _SM_CRIT__COMMERROR);// => waiting for L, H will produce error
+          __whenLineLThen(_SM_HANDSHAKE__S0);                                   // => waiting for L   (H will produce error)
           
-        } else if (state == _SM_CRIT__COMMERROR) {                          // Line is L,M,H
+        } else if (state == _SM_CRIT__COMMERROR) {                              // Line is <ANY>
           __setSF(_SF_IS_ERROR);
-          __lineExpectsLMH(_SM_NOP, _SM_NOP, _SM_NOP);                      // => None of states will do any action till timer expires
-          _deactivatePD(); // show Tx that we gave-up
+          __whenLineAnyThen(_SM_CRIT__COMMERROR);                               // => None of states will do any action till timer expires
+          _suspendCommunication();                                              // ! Show Tx that we gave-up, now we pull line Up instead!
           __clearSF(_SF_IS_CONNECTED);
           
           // Enable CommError timer, after it elapses - restart communication
@@ -248,64 +308,119 @@ namespace pinkyvolt::debug::rx {
           __setSF(_SF_COMMERROR_TIMER_ACTIVE);
 
         } else {
-          __lineExpectsALL(_SM_RARE__ALG_ERROR_UNHANDLED_STATE);
+          __whenLineAnyThen(_SM_OTH__ALG_ERROR_UNHANDLED_STATE);
         }
       }
 
       __attribute__((always_inline))
       static void inline _handleHandshakeStates(uint8_t state) {
-        if (state == _SM_HANDSHAKE__S0) {                                   // Line is L
-          __lineExpectsLMH(_SM_NOP, _SM_HANDSHAKE__S1, _SM_CRIT__COMMERROR);// => waiting for M, H will produce error
+        if (state == _SM_HANDSHAKE__S0) {                                       // Line is L
+          __whenLineMThen(_SM_HANDSHAKE__S1);                                   // => waiting for M  (H will produce error)
           
-        } else if (state == _SM_HANDSHAKE__S1) {                            // Line is M
-          __lineExpectsLMH(_SM_CRIT__COMMERROR, _SM_NOP, _SM_HANDSHAKE__S2);// => waiting for H, L will produce error
+        } else if (state == _SM_HANDSHAKE__S1) {                                // Line is M
+          __whenLineHThen(_SM_HANDSHAKE__S2);                                   // => waiting for H  (L will produce error)
           
-        } else if (state == _SM_HANDSHAKE__S2) {                            // Line is H
-          __lineExpectsLMH(_SM_CRIT__COMMERROR, _SM_HANDSHAKE__S3, _SM_NOP);// => waiting for M, L will produce error
+        } else if (state == _SM_HANDSHAKE__S2) {                                // Line is H
+          __whenLineMThen(_SM_HANDSHAKE__S3);                                   // => waiting for M  (L will produce error)
           
-        } else if (state == _SM_HANDSHAKE__S3) {                            // Line is M
+        } else if (state == _SM_HANDSHAKE__S3) {                                // Line is M
           // Handshake complete, now prepare everything for Reading!
-          _readingDataBuf = 0;
-          _readingDataBit = 0;
-          __lineExpectsLMH(_SM_READ__S0, _SM_NOP, _SM_READ__S0);            // => waiting for L or H
+          _initializeRead();
+          __whenLineLMHThen(_SM_READ__S0, _SM_CRIT__COMMERROR, _SM_READ__S0);   // => waiting for L or H
 
         } else {
-          __lineExpectsALL(_SM_RARE__ALG_ERROR_UNHANDLED_STATE);
+          __whenLineAnyThen(_SM_OTH__ALG_ERROR_UNHANDLED_STATE);
         }
+      }
+
+      static void inline _initializeRead() {
+        for (int i = 0; i < SIZE; i++) {
+          _readingDataBuf[i] = 0;
+        }
+        _readingDataBit = 0;
       }
 
       __attribute__((always_inline))
       static void inline _handleReadStates(uint8_t state, LineState ls) {
-        // FIXME Order IFs
-        if (state == _SM_READ__S0) {                                        // Line is L or H
-          if (ls == L) {                                                    //    is L
-            __lineExpectsLMH(_SM_NOP, _SM_READ__S1, _SM_CRIT__COMMERROR);   // => waiting for M, H will produce error
-            
-          } else {                                                          //    is H
-            // reconstruct by setting first bit and shifting whole byte in _SM_READ__S1
-            _readingDataBuf |= 1 << _readingDataBit;
-            __lineExpectsLMH(_SM_CRIT__COMMERROR, _SM_READ__S1, _SM_NOP);   // => waiting for M, L will produce error
+        if (state == _SM_READ__S0) {                                            // Line is L or H
+          if (ls == L) {                                                        //  Line is L
+            __whenLineMThen(_SM_READ__S1);                                      // => waiting for M  (H will produce error)
+          } else {                                                              //  Line is H
+            _readingDataBuf[_readingDataBit>>3] |= 1 << (_readingDataBit&7);
+            __whenLineMThen(_SM_READ__S1);                                      // => waiting for M  (L will produce error)
           }
           
-        } else if (state == _SM_READ__S1) {                                 // Line is M
+        } else if (state == _SM_READ__S1) {                                     // Line is M
           _readingDataBit++;
-          if (_readingDataBit < 8) {
+          if (_readingDataBit < (SIZE<<3)) {
             // keep reading
-            __lineExpectsLMH(_SM_READ__S0, _SM_NOP, _SM_READ__S0);          // => waiting for L or H
+            __whenLineLMHThen(_SM_READ__S0, _SM_CRIT__COMMERROR, _SM_READ__S0); // => waiting for L or H
           } else {
-            _receivedData = _readingDataBuf;
-            __setSF(_SF_FRESH_DATA);
-            
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+              for (int i = 0; i < SIZE; i++) {
+                _receivedData[i] = _readingDataBuf[i];
+              }
+              __setSF(_SF_FRESH_DATA);
+            }
+
+            // Done Reading
             // Switch to Writing
-            // FIXME Implement this!!!
-            //_state = WRITING;
+            _initializeWrite();
+            __whenLineHThen(_SM_WRITE_S0);                                      // => waiting for H  (L will produce error)
           }
 
         } else {
-          __lineExpectsALL(_SM_RARE__ALG_ERROR_UNHANDLED_STATE);
+          __whenLineAnyThen(_SM_OTH__ALG_ERROR_UNHANDLED_STATE);
         }
       }
 
+      static void inline _initializeWrite() {
+        _writingDataBuf[0] = _writingDataBuf[1] = 0;
+        _readingDataBit = 0;
+      }
+
+      __attribute__((always_inline))
+      static void inline _handleWriteStates(uint8_t state, LineState ls) {
+        /*if (state == _SM_WRITE__S0) {                                           // Line is H
+          STOP HERE - We cannot directly go from H to L - line will cross M and ISR triggers!!!!
+          1) TX: sending 1 system byte first (here we read it)
+            it consists of 5 bit for size of data
+            2 bits to show last transmission errors (one bit for last two transmissions)
+            1 bit shows if last received byte from RX was processed by user sketch (on TX side)
+          2) RX: sending 1 user sketch command byte (uscbyte+CRC(includes uscbyte))
+          
+          if (ls == L) {                                                        //    is L
+            __whenLineMThen(_SM_READ__S1);                                      // => waiting for M  (H will produce error)
+          } else {                                                              //    is H
+            _readingDataBuf[_readingDataBit>>3] |= 1 << (_readingDataBit&7);
+            __whenLineMThen(_SM_READ__S1);                                      // => waiting for M  (L will produce error)
+          }
+          
+        } else if (state == _SM_READ__S1) {                                     // Line is M
+          _readingDataBit++;
+          if (_readingDataBit < (SIZE<<3)) {
+            // keep reading
+            __lineExpectsLMH(_SM_READ__S0, _SM_CRIT__COMMERROR, _SM_READ__S0);  // => waiting for L or H
+          } else {
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+              for (int i = 0; i < SIZE; i++) {
+                _receivedData[i] = _readingDataBuf[i];
+              }
+              __setSF(_SF_FRESH_DATA);
+            }
+
+            // Done Reading
+            // Switch to Writing
+            // FIXME Implement this!!!
+            //_state = WRITING;
+            //__whenLineMThen(_SM_WR_START);
+          }
+
+        } else {
+          __whenLineAnyThen(_SM_OTH__ALG_ERROR_UNHANDLED_STATE);
+        }*/
+      }
+      
     public:
 
       // Assumes ClockLR was updated! // FIXME We need this assertion happen at compile time!
@@ -342,37 +457,40 @@ namespace pinkyvolt::debug::rx {
         return __isSFSet(_SF_FRESH_DATA);
       }
 
-      static uint8_t getData() {
+      static uint8_t getData(uint8_t i) {
         uint8_t data;
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
           __clearSF(_SF_FRESH_DATA);
-          data = _receivedData;
+          data = i < SIZE ? _receivedData[i] : 0;
         }
         return data;
       }
       
   };
 
-  template <uint8_t P, uint8_t C, uint8_t PD>
-  volatile uint8_t OneWireErrorReceiver<P,C,PD>::_statusFlags = 0;
-  template <uint8_t P, uint8_t C, uint8_t PD>
-  volatile uint8_t OneWireErrorReceiver<P,C,PD>::_receivedData = 0;
-  template <uint8_t P, uint8_t C, uint8_t PD>
-  uint8_t OneWireErrorReceiver<P,C,PD>::_readingDataBuf = 0;
-  template <uint8_t P, uint8_t C, uint8_t PD>
-  uint8_t OneWireErrorReceiver<P,C,PD>::_readingDataBit = 0;
-  template <uint8_t P, uint8_t C, uint8_t PD>
-  typename OneWireErrorReceiver<P,C,PD>::LineThenState OneWireErrorReceiver<P,C,PD>::_lineTransitions;
-  template <uint8_t P, uint8_t C, uint8_t PD>
-  uint16_t OneWireErrorReceiver<P,C,PD>::_commErrorTimer = 0;
-  template <uint8_t P, uint8_t C, uint8_t PD>
-  uint16_t OneWireErrorReceiver<P,C,PD>::_wdtTimer = 0;
-  template <uint8_t P, uint8_t C, uint8_t PD>
-  uint8_t* const OneWireErrorReceiver<P,C,PD>::_lineTransitionsAsArr = 
-                    (uint8_t*)&OneWireErrorReceiver<P,C,PD>::_lineTransitions;
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  volatile uint8_t OneWireErrorReceiver<P,C,PD,S>::_statusFlags = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  volatile uint8_t OneWireErrorReceiver<P,C,PD,S>::_receivedData[S + OneWireErrorReceiver<P,C,PD,S>::_SYS_BYTES] = {};
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  uint8_t OneWireErrorReceiver<P,C,PD,S>::_readingDataBuf[S + OneWireErrorReceiver<P,C,PD,S>::_SYS_BYTES] = {};
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  uint8_t OneWireErrorReceiver<P,C,PD,S>::_readingDataBit = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  uint8_t OneWireErrorReceiver<P,C,PD,S>::_writingDataBuf[2] = {};
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  typename OneWireErrorReceiver<P,C,PD,S>::LineThenState OneWireErrorReceiver<P,C,PD,S>::_lineTransitions;
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  uint16_t OneWireErrorReceiver<P,C,PD,S>::_commErrorTimer = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  uint16_t OneWireErrorReceiver<P,C,PD,S>::_wdtTimer = 0;
+  template <uint8_t P, uint8_t C, uint8_t PD, uint8_t S>
+  uint8_t* const OneWireErrorReceiver<P,C,PD,S>::_lineTransitionsAsArr = 
+                    (uint8_t*)&OneWireErrorReceiver<P,C,PD,S>::_lineTransitions;
 
 }
 
-using ErrorReceiver = pinkyvolt::debug::rx::OneWireErrorReceiver<2, 3, 4>;
+template <uint8_t PD, uint8_t SIZE>
+using ErrorReceiver = pinkyvolt::debug::rx::OneWireErrorReceiver<2, 3, PD, SIZE>;
 
 #endif
