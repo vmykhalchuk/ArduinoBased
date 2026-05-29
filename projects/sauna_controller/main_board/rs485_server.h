@@ -2,7 +2,6 @@
 #define RS485_SERVER_H
 
 #include <Arduino.h>
-#include "clock.h"
 
 namespace RS485Server {
 

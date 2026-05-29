@@ -2,7 +2,7 @@
 #define TESTS_H
 
 #include <Arduino.h>
-#include "switch_pin.h"
+#include <switch_pin.h>
 #include "rs485_server.h"
 
 namespace Tests {

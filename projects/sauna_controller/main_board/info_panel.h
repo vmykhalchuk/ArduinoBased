@@ -2,8 +2,7 @@
 #define INFO_PANEL_H
 
 #include <Arduino.h>
-#include "clock.h"
-#include "switch_pin.h"
+#include <switch_pin.h>
 
 namespace InfoPanel {
 

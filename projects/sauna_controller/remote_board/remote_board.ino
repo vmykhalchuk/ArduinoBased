@@ -1,8 +1,17 @@
+/*
+
+  Sauna Controller : Remote Board
+
+  Libraries required:
+    - PinkyvoltToolkit v0.1.0
+
+ */
+
 #include <Arduino.h>
-#include "clock.h"
+#include <clock.h>
+#include <input_button.h>
 #include "rs485_client.h"
 #include "tm1637.h"
-#include "input_button.h"
 
 int pin_RS485_DIR = 2; // LOW - Listening, HIGH - Transmitting
 int pin_TM1637_CLK = 4;

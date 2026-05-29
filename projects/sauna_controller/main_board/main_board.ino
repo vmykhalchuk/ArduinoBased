@@ -1,9 +1,18 @@
+/*
+
+  Sauna Controller : Main Board
+
+  Libraries required:
+    - PinkyvoltToolkit v0.1.0
+
+ */
+
 #include <Arduino.h>
-#include "clock.h"
-#include "switch_pin.h"
+#include <clock.h>
+#include <ds18b20.h>
+#include <switch_pin.h>
 #include "rs485_server.h"
 #include "info_panel.h"
-#include "ds18b20.h"
 #include "tests.h"
 
 const int pin_RS485_dir = 2; // LOW - Listening, HIGH - Transmitting

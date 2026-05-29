@@ -1,3 +1,4 @@
+#include <clock.h>
 #include "info_panel.h"
 
 namespace InfoPanel {

@@ -1,5 +1,6 @@
+#include <clock.h>
+#include <pvt_crc8.hpp>
 #include "rs485_server.h"
-#include "crc8.hpp"
 
 namespace RS485Server {
   
@@ -69,7 +70,7 @@ namespace RS485Server {
       _isDataReceivingStarted = false;
     
       uint8_t payload[2] = {b1, b2};
-      uint8_t calcCRC = CRC8::calculate(payload, 2);
+      uint8_t calcCRC = pvt::CRC8::calculate(payload, 2);
 
       uint8_t responseByte = 0;
       bool crcValid = calcCRC == receivedCRC;

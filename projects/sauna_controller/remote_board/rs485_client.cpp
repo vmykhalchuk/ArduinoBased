@@ -1,5 +1,6 @@
+#include <pvt_crc8.hpp>
+#include <clock.h>
 #include "rs485_client.h"
-#include "crc8.hpp"
 
 
 namespace RS485Client {
@@ -72,7 +73,7 @@ namespace RS485Client {
                  (f1 << 3) | (f2 << 2) | (f3 << 1) | f4;
                  
     uint8_t payload[2] = {b1, b2};
-    uint8_t crc = CRC8::calculate(payload, 2);
+    uint8_t crc = pvt::CRC8::calculate(payload, 2);
   
     // Performance improvement:
     //   Use my_serial
