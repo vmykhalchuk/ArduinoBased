@@ -19,7 +19,7 @@
 
 using ErrorTx = pvt::ErrorTransmitter<5,8>; // Pin 5; 8 bytes of data
 //using ErrorRx = pvt::ErrorReceiver<4,8>; // Pins used: 2(INT0),3(INT1),4; 8 bytes of data
-using RXV2DumDum = pvt::toolkit::debug::RXV2Dummy<2,3>; // Pins used 2 (Line Read) and 3 (Strong Up/Down Pull)
+using RXV2DumDum = pvt::ErrorReceiver<2,3>; // Pins used 2 (Line Read) and 3 (Strong Up/Down Pull)
 
 
 InputButton::Def btnMain = { .pinNo = 3, .isActiveHigh = false, .enablePullup = true , ._ctx = {}};

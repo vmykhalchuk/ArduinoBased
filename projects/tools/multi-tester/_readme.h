@@ -44,3 +44,19 @@ This program will read errors stream from single wire. This is my protocol
 to debug programs. Similar to OneWire.
 
 ------------------------------------------------
+
+
+
+  -=-=-=--=-=- ERRORs -=-=-=-=-=-=--=
+  
+EEPROM Failures:
+  When screen transitions between three values:
+    - EPr
+    - Err
+    - three digits code
+      - 01 - 04     - System error: Config error
+      - 05 - 09,11  - System error: Alg error
+      - 10          - EEPROM Read failure - Bad CRC
+      - 12-16       - EEPROM Corrupted
+      - 17          - System error: Alg error
+      
