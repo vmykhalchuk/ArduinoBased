@@ -70,7 +70,9 @@ void setup() {
     }
     if (true) {
       RXV2DumDum::setup();
-      bool success = RXV2DumDum::readFrame(0x10);
+      uint8_t err = 0;
+      bool success = RXV2DumDum::readFrame(0x10, err);
+      Serial.print("err: "); Serial.println(err);
       Serial.print("Success: "); Serial.println(success);
     }
 
