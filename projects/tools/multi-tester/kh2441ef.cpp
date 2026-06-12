@@ -235,7 +235,7 @@ namespace KH2441EF {
     setDisplayBufToInt(i, false);
   }
 
-  void setDisplayBufToInt(uint16_t i, bool displayLeadingZeros) {
+  void setDisplayBufToInt(uint16_t i, bool displayLeadingZeroes) {
     if (i >= 2000) {
       setDisplayBufToErrorMsg();
       return;
@@ -245,11 +245,11 @@ namespace KH2441EF {
     uint8_t d100 =  i / 100 % 10;
     uint8_t d10 =  i / 10 % 10;
     uint8_t d1 =  i / 1 % 10;
-    d1000 = d1000 == 0 ? 0x10 : 1;
-    d100  = d1000 == 0 && d100 == 0 ? 0x10 : d100;
-    d10   = d1000 == 0 && d100 == 0 && d10 == 0 ? 0x10 : d10;
+    
+    //d100  = d1000 == 0 && d100 == 0 ? 0x10 : d100;
+    //d10   = d1000 == 0 && d100 == 0 && d10 == 0 ? 0x10 : d10;
 
-    if (!displayLeadingZeros) {
+    if (!displayLeadingZeroes) {
       // set leading zeroes to blank
       if (d1000 == 0) {
         d1000 = S_BLANK;
@@ -260,9 +260,40 @@ namespace KH2441EF {
           }
         }
       }
+    } else {
+      d1000 = d1000 == 0 ? S_BLANK : 1;
     }
     
     setDisplayBuf(d1000,d100,d10,d1,false);
+  }
+  
+  void setDisplayBufToIntAsHex(uint16_t i, bool displayLeadingZeroes) {
+    if (i >= 0x1FFF) {
+      setDisplayBufToErrorMsg();
+      return;
+    }
+    
+    uint8_t h1000 = i / 0x1000 % 0x10;
+    uint8_t h100 = i / 0x100 % 0x10;
+    uint8_t h10 = i / 0x10 % 0x10;
+    uint8_t h1 = i / 0x1 % 0x10;
+
+    if (!displayLeadingZeroes) {
+      // set leading zeroes to blank
+      if (h1000 == 0) {
+        h1000 = S_BLANK;
+        if (h100 == 0) {
+          h100 = S_BLANK;
+          if (h10 == 0) {
+            h10 = S_BLANK;
+          }
+        }
+      }
+    } else {
+      h1000 = h1000 == 0 ? S_BLANK : 1;
+    }
+    
+    setDisplayBuf(h1000,h100,h10,h1,false);
   }
   
   void setDisplayBufToFloatWithOneDecimal(float f) {
@@ -285,9 +316,17 @@ namespace KH2441EF {
     _updateDisplayBufDigitN(3, dig3);
     _updateDisplayBufDigitN(2, dig2);
     _updateDisplayBufDigitN(1, dig1);
-    if (point) {
-      displayBuf[2] = displayBuf[2] | B0000001;
-    }
+    
+    if (point) updateDisplayBufPoint();
+  }
+  
+  void updateDisplayBufDigit(uint8_t digitNo, uint8_t digValue) {
+    if (digitNo == 0 || digitNo > 4) return;
+    _updateDisplayBufDigitN(digitNo, digValue);
+  }
+  
+  void updateDisplayBufPoint() {
+    displayBuf[2] = displayBuf[2] | B0000001;
   }
   
   // Err will be displayed
@@ -366,12 +405,16 @@ namespace KH2441EF {
       seg = B01000000;
     } else if (v == S_A) {      // (0gfe-cba) A
       seg = B01101101;
+    } else if (v == S_b) {      // (0gfedc--) b
+      seg = B01111100;
     } else if (v == S_S) {      // (0gf-dc-a) S
       seg = B01101101;
     } else if (v == S_d) {      // (0g-edcb-) d
       seg = B01111111;
     } else if (v == S_u) {      // (0--edc--) u
       seg = B00011100;
+    } else if (v == S_F) {      // (0gfe---a) F
+      seg = B01110001;
     } else if (v == S_QM) {     // (0g-e--ba) ?
       seg = B01010011;
     }
