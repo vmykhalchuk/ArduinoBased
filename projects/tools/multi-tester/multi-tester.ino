@@ -38,6 +38,7 @@ void freezeAndDisplayEEPROMError() {
     KH2441EF::tick();
     ClockLR::tick();
     InputButton::tick(btnSelect);
+    InputButton::tick(btnExit);
     if (ClockLR::isElapsed(timerMs, 700)) {
       switch (displMsg) {
         case 0: KH2441EF::setDisplayBuf(sel, KH2441EF::S_E, KH2441EF::S_P, KH2441EF::S_r, false); break;
@@ -115,6 +116,8 @@ void setup() {
     KH2441EF::tick();
   }
   KH2441EF::muteDisplayInstantly();
+  InputButton::reset(btnSelect);
+  InputButton::reset(btnExit);
   
   while(true) loop(progNo);
 }
@@ -122,6 +125,7 @@ void setup() {
 void loop() {}
 
 enum SelProgState { NOT_INTLZD, IDLE, WAITING_4DOUBLE_CLICK, WAITING_4EXIT };
+
 uint8_t selectProgramMode(uint8_t startWithProgNo, bool forSave99) {
   uint8_t pn = startWithProgNo;
   bool isOn = false;
@@ -139,7 +143,6 @@ uint8_t selectProgramMode(uint8_t startWithProgNo, bool forSave99) {
       isOn = true;//!isOn; // lets stop this blinking
       updateDisplayWithProgNo(pn, isOn, forSave99);
     }
-    bool _exit = false;
     switch (state) {
       case NOT_INTLZD:
         if (!InputButton::isLongPressed(btnSelect)) {
@@ -176,13 +179,12 @@ uint8_t selectProgramMode(uint8_t startWithProgNo, bool forSave99) {
         updateDisplayWithProgNo(pn, isOn, true, forSave99);
         if (!InputButton::isPressed(btnSelect)) {
           InputButton::reset(btnSelect);
-          _exit = true;
+          return pn;
         }
       break;
     }
-    if (_exit) break;
   }
-  return pn;
+  return 99;
 }
 
 void updateDisplayWithProgNo(uint8_t pn, bool isOn, bool forSave99) {

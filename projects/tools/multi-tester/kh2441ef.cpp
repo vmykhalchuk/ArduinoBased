@@ -1,4 +1,5 @@
 #include "kh2441ef.h"
+#include <util/atomic.h>
 
 namespace KH2441EF {
 
@@ -50,6 +51,7 @@ namespace KH2441EF {
    */
   void displayUpdateForBatch(uint8_t i) {
     clearDAll();
+    delay(1);
     if (i == 1) {
       uint8_t segments[] = {2,3,4,5,6};
       for (int j = 0; j < 5; j++) {
@@ -181,10 +183,12 @@ namespace KH2441EF {
   }
   
   void clearDAll() {
-    DDRD = DDRD & B00011111;
-    PORTD = PORTD & B00011111;
-    DDRB = DDRB & B11111000;
-    PORTB = PORTB & B11111000;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+      PORTD = PORTD & B00011111;
+      PORTB = PORTB & B11111000;
+      DDRD = DDRD & B00011111;
+      DDRB = DDRB & B11111000;
+    }
   }
   
   void setDPinHigh(uint8_t p) {
