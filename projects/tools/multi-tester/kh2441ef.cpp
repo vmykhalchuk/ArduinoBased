@@ -9,9 +9,9 @@ namespace KH2441EF {
   void setDPinLow(uint8_t p);
 
   uint8_t displayBuf[] = {0,0,0};
-  uint8_t state = 1;
+  uint8_t state = 0;
   uint16_t startMs = 0;
-  uint8_t waitForMs = 0;
+  uint16_t waitForMs = 0;
 
   void tick() {
     if (state == 0) {
@@ -34,6 +34,10 @@ namespace KH2441EF {
   }
 
   void tickV2() {
+    tick();
+  }
+  
+  void _tickV2() {
     if (state == 0) {
       startMs = ClockLR::now;
       state++;
@@ -50,7 +54,7 @@ namespace KH2441EF {
       if (ClockLR::isElapsed(startMs, waitForMs)) {
         state -= 100;
         state++;
-        if (state == 7) state = 0;
+        if (state == 25) state = 0;
       }
     }
   }

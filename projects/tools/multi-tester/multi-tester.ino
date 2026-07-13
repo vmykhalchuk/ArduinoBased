@@ -230,7 +230,7 @@ void loop(uint8_t progNo) {
   ClockLR::tick();
   InputButton::tick(btnSelect);
   InputButton::tick(btnExit);
-  KH2441EF::tick();
+  KH2441EF::tickV2();
   
   switch(progNo) {
     case 00: tickProg00(progsData[0], progsData[1]); break;
