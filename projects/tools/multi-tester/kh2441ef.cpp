@@ -21,12 +21,34 @@ namespace KH2441EF {
     
     if (state < 10) { // 1..6
       displayUpdateForBatch(state);
-      waitForMs = state * 4;
+      waitForMs = state << 2; // waitForMs = state * 4;
       state += 10;
 
     } else if (state > 10) { // 11..16
       if (ClockLR::isElapsed(startMs, waitForMs)) {
         state -= 10;
+        state++;
+        if (state == 7) state = 0;
+      }
+    }
+  }
+
+  void tickV2() {
+    if (state == 0) {
+      startMs = ClockLR::now;
+      state++;
+    }
+    
+    if (state < 100) { // 1..24
+      clearDAll();
+      lightDSegmentOnlyHigh(state-1);
+      //displayUpdateForBatch(state);
+      waitForMs = state << 1;
+      state += 100;
+
+    } else if (state > 100) { // 101..124
+      if (ClockLR::isElapsed(startMs, waitForMs)) {
+        state -= 100;
         state++;
         if (state == 7) state = 0;
       }
@@ -42,16 +64,16 @@ namespace KH2441EF {
   }
   
   /**
-      1 - { 2, 3, 4, 5, 6}
-      2 - { 7, 8, 9,14,15}
-      3 - { 0, 1,10,16,17}
-      4 - {11,18,21}
-      5 - {12,19,22}
-      6 - {13,20,23}
+      1 - {  2,  3,  4,  5,  6 }
+      2 - {  7,  8,  9, 14, 15 }
+      3 - {  0,  1, 10, 16, 17 }
+      4 - { 11, 18, 21 }
+      5 - { 12, 19, 22 }
+      6 - { 13, 20, 23 }
    */
   void displayUpdateForBatch(uint8_t i) {
     clearDAll();
-    delay(1);
+    //delay(1);
     if (i == 1) {
       uint8_t segments[] = {2,3,4,5,6};
       for (int j = 0; j < 5; j++) {

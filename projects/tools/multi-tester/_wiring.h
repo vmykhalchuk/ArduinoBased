@@ -2,6 +2,8 @@
 
 - Select Button   - GND,D11
 - Exit Button     - GND,D12
+- Reset Button    - GND,RESET
+
 - KH2441EF        - D5,D6,D7,D8,D9,D10
 
 - DS18B20         - VCC, D4, GND              - P00
