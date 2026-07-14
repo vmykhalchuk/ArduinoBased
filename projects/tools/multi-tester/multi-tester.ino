@@ -35,7 +35,7 @@ void freezeAndDisplayEEPROMError() {
   uint8_t displMsg = 0; // EPr -> Err -> <Code>
   uint8_t sel = KH2441EF::S_SEL1;
   while (true) { // FIXME Make it possible to reset EEPROM from here! For example by pressing two buttons for T > LONG_PRESS_DURATION_MS
-    KH2441EF::tickV2();
+    KH2441EF::tick();
     ClockLR::tick();
     InputButton::tick(btnSelect);
     InputButton::tick(btnExit);
@@ -67,7 +67,7 @@ void setup() {
     ClockLR::tick();
     InputButton::tick(btnSelect);
     InputButton::tick(btnExit);
-    KH2441EF::tickV2();
+    KH2441EF::tick();
     if (InputButton::isLongPressed(btnSelect)) {
       // enter select program mode
       progNo = selectProgramMode(progNo, false);
@@ -92,7 +92,7 @@ void setup() {
         ClockLR::tick();
         InputButton::tick(btnSelect);
         InputButton::tick(btnExit);
-        KH2441EF::tickV2();
+        KH2441EF::tick();
         if (ClockLR::isElapsed(setupTimerMs, 300)) {
           //updateDisplayWithProgNo(progNo, i % 2, i % 2, true);
           KH2441EF::setDisplayBuf(i % 2 ? KH2441EF::S_SEL2 : KH2441EF::S_BLANK,
@@ -113,7 +113,7 @@ void setup() {
   setupTimerMs = ClockLR::tick();
   while (!ClockLR::isElapsed(setupTimerMs, 1500)) {
     ClockLR::tick();
-    KH2441EF::tickV2();
+    KH2441EF::tick();
   }
   KH2441EF::muteDisplayInstantly();
   InputButton::reset(btnSelect);
@@ -136,7 +136,7 @@ uint8_t selectProgramMode(uint8_t startWithProgNo, bool forSave99) {
     ClockLR::tick();
     InputButton::tick(btnSelect);
     InputButton::tick(btnExit);
-    KH2441EF::tickV2();
+    KH2441EF::tick();
     if (ClockLR::isElapsed(displayBlinkStartMs, 700)) {
       displayBlinkStartMs = ClockLR::now;
       // update screen
@@ -230,7 +230,7 @@ void loop(uint8_t progNo) {
   ClockLR::tick();
   InputButton::tick(btnSelect);
   InputButton::tick(btnExit);
-  KH2441EF::tickV2();
+  KH2441EF::tick();
   
   switch(progNo) {
     case 00: tickProg00(progsData[0], progsData[1]); break;

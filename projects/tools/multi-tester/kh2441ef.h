@@ -29,12 +29,9 @@ namespace KH2441EF {
   const uint8_t S_QM = 0x33;    // ?
 
   // use either tick() or displayLoop24ms()
-  void tick(); // non-blocking (41Hz)
-  void tickV2(); // non-blocking (21Hz), separate segments light-up (no ghosting)
+  void tick(); // non-blocking (~41Hz)
+               // v2: non-blocking (~10Hz), separate segments light-up (no ghosting)
   
-  void displayLoop24ms(); // blocking for 24ms
-  void displayUpdateForBatch(uint8_t i); // TODO make it private
-
   // clear and set int value
   void setDisplayBufToInt(uint16_t i);
   // clear and set int value
