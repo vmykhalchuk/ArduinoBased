@@ -3,7 +3,7 @@
 
 namespace KH2441EF {
 
-  inline void _tick();
+  inline void _tickV1();
   inline void _tickV2();
 
   inline void _illuminateSingleSegment(uint8_t s);
@@ -20,10 +20,10 @@ namespace KH2441EF {
   uint16_t waitForMs = 0;
 
   void tick() {
-    _tickV2();
+    _tickV1();
   }
   
-  inline void _tick() {
+  inline void _tickV1() {
     if (state == 0) {
       startMs = ClockLR::now;
       state = 1;
