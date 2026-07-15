@@ -3,8 +3,8 @@
 
 namespace KH2441EF {
 
-  inline void _tickV1();
-  inline void _tickV2();
+  inline void _tickV1(uint8_t tickWaitMs);
+  inline void _tickV2(uint8_t tickWaitMs);
 
   inline void _illuminateSingleSegment(uint8_t s);
   inline void _illuminateGroupOfSegments(uint8_t i);
@@ -20,19 +20,19 @@ namespace KH2441EF {
   uint16_t waitForMs = 0;
 
   void tick() {
-    _tickV1();
+    _tickV2(1);
   }
   
-  inline void _tickV1() {
+  inline void _tickV1(uint8_t tickWaitMs = 4) {
     if (state == 0) {
       startMs = ClockLR::now;
       state = 1;
-      waitForMs = 4;
+      waitForMs = tickWaitMs;
     }
     
     if (state < 10) { // 1..6
       _illuminateGroupOfSegments(state);
-      waitForMs += 4;
+      waitForMs += tickWaitMs;
       state += 10;
 
     } else if (state > 10) { // 11..16
@@ -44,16 +44,16 @@ namespace KH2441EF {
     }
   }
 
-  inline void _tickV2() {
+  inline void _tickV2(uint8_t tickWaitMs = 2) {
     if (state == 0) {
       startMs = ClockLR::now;
       state = 1;
-      waitForMs = 4;
+      waitForMs = tickWaitMs;
     }
     
     if (state < 100) { // 1..24
       _illuminateSingleSegment(state);
-      waitForMs += 4;
+      waitForMs += tickWaitMs;
       state += 100;
 
     } else if (state > 100) { // 101..124
