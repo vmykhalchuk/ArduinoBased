@@ -21,7 +21,7 @@ namespace KH2441EF {
   uint16_t waitForMs = 0;
 
   void tick() {
-    _tickV2(2);
+    _tickV2(1500);
   }
   
   inline void _tickV1(uint8_t tickWaitMs = 4) {
@@ -61,7 +61,7 @@ namespace KH2441EF {
       if (ClockLR::isElapsed(startMs, waitForMs)) {
         state -= 100;
         state++;
-        if (state == 25) state = 0;
+        if (state == 8/*25*/) state = 0;
       }
     }
   }
@@ -69,7 +69,7 @@ namespace KH2441EF {
   inline void _illuminateSingleSegment(uint8_t s) {
     __drainAll();
     uint8_t m = 1 << (s%8);
-    if (displayBuf[s/8] & m) {
+    if (true/*displayBuf[s/8] & m*/) {
       __setDPinHigh(__highSidePinOfSegment(s));
       __setDPinLow(__lowSidePinOfSegment(s));
     }
