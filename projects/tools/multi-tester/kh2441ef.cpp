@@ -11,6 +11,7 @@ namespace KH2441EF {
   inline uint8_t __lowSidePinOfSegment(uint8_t s);
   inline uint8_t __highSidePinOfSegment(uint8_t s);
   inline void __clearDAll();
+  inline void __drainAll();
   inline void __setDPinHigh(uint8_t p);
   inline void __setDPinLow(uint8_t p);
 
@@ -20,7 +21,7 @@ namespace KH2441EF {
   uint16_t waitForMs = 0;
 
   void tick() {
-    _tickV2(1);
+    _tickV2(2);
   }
   
   inline void _tickV1(uint8_t tickWaitMs = 4) {
@@ -66,7 +67,7 @@ namespace KH2441EF {
   }
 
   inline void _illuminateSingleSegment(uint8_t s) {
-    __clearDAll();
+    __drainAll();
     uint8_t m = 1 << (s%8);
     if (displayBuf[s/8] & m) {
       __setDPinHigh(__highSidePinOfSegment(s));
@@ -165,51 +166,75 @@ namespace KH2441EF {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
       PORTD = PORTD & B00011111;
       PORTB = PORTB & B11111000;
-      DDRD = DDRD & B00011111;
-      DDRB = DDRB & B11111000;
+      DDRD = DDRD   & B00011111;
+      DDRB = DDRB   & B11111000;
+    }
+  }
+
+  inline void __drainAll() {
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+      PORTD = PORTD & B00011111;
+      PORTB = PORTB & B11111000;
+      DDRD = DDRD   | B11100000;
+      DDRB = DDRB   | B00000111;
+    }
+    delayMicroseconds(100);
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+      DDRD = DDRD   & B00011111;
+      DDRB = DDRB   & B11111000;
     }
   }
   
   inline void __setDPinHigh(uint8_t p) {
     if (p == 1) {
-      DDRD = DDRD | B00100000;
+      DDRD  = DDRD  | B00100000;
       PORTD = PORTD | B00100000;
+      
     } else if (p == 2) {
-      DDRD = DDRD | B01000000;
+      DDRD  = DDRD  | B01000000;
       PORTD = PORTD | B01000000;
+      
     } else if (p == 3) {
-      DDRD = DDRD | B10000000;
+      DDRD  = DDRD  | B10000000;
       PORTD = PORTD | B10000000;
+      
     } else if (p == 4) {
-      DDRB = DDRB | B00000001;
+      DDRB  = DDRB  | B00000001;
       PORTB = PORTB | B00000001;
+      
     } else if (p == 5) {
-      DDRB = DDRB | B00000010;
+      DDRB  = DDRB  | B00000010;
       PORTB = PORTB | B00000010;
+      
     } else if (p == 6) {
-      DDRB = DDRB | B00000100;
+      DDRB  = DDRB  | B00000100;
       PORTB = PORTB | B00000100;
     }
   }
   
   inline void __setDPinLow(uint8_t p) {
     if (p == 1) {
-      DDRD = DDRD | B00100000;
+      DDRD  = DDRD  | B00100000;
       PORTD = PORTD & B11011111;
+      
     } else if (p == 2) {
-      DDRD = DDRD | B01000000;
+      DDRD  = DDRD  | B01000000;
       PORTD = PORTD & B10111111;
+      
     } else if (p == 3) {
-      DDRD = DDRD | B10000000;
+      DDRD  = DDRD  | B10000000;
       PORTD = PORTD & B01111111;
+      
     } else if (p == 4) {
-      DDRB = DDRB | B00000001;
+      DDRB  = DDRB  | B00000001;
       PORTB = PORTB & B11111110;
+      
     } else if (p == 5) {
-      DDRB = DDRB | B00000010;
+      DDRB  = DDRB  | B00000010;
       PORTB = PORTB & B11111101;
+      
     } else if (p == 6) {
-      DDRB = DDRB | B00000100;
+      DDRB  = DDRB  | B00000100;
       PORTB = PORTB & B11111011;
     }
   }
