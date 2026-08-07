@@ -56,7 +56,7 @@ After frame is received - program displays message till user presses button to r
 This program reads special signal to determine which line ID is input receiving.
 Another board is transmitting unique IDs with CRC over many lines.
 When input D? is connected to any of that line, it will read ID+CRC transfered
-and display on KH2441EF screen
+and display on the screen
 
 DEV NOTES:
  - use optoisolation for transmitter and receiver

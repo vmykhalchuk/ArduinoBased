@@ -15,7 +15,16 @@
 #include <pvt_adc_precise.hpp>
 #include <pvt_debug.hpp>
 #include "htu21d.h" // Uses A4,A5
-#include "kh2441ef.h" // Pins used 5,6,7,8,9,10
+
+//#define USE_KH2441
+
+#ifdef USE_KH2441
+  #include "kh2441ef.h" // Pins used 5,6,7,8,9,10
+#else
+  #include "tm1637.h"
+  const int pin_TM1637_CLK = 4;
+  const int pin_TM1637_DIO = 5;
+#endif
 
 using ErrorRx = pvt::ErrorReceiver<2,3>; // Pins used 2 (Line Read) and 3 (Strong Up/Down Pull)
 
@@ -33,22 +42,34 @@ void freezeAndDisplayEEPROMError() {
   
   uint16_t timerMs = ClockLR::tick();
   uint8_t displMsg = 0; // EPr -> Err -> <Code>
-  uint8_t sel = KH2441EF::S_SEL1;
+  bool sel = true;
   while (true) { // FIXME Make it possible to reset EEPROM from here! For example by pressing two buttons for T > LONG_PRESS_DURATION_MS
-    KH2441EF::tick();
+    #ifdef USE_KH2441
+      KH2441EF::tick();
+    #endif
     ClockLR::tick();
     InputButton::tick(btnSelect);
     InputButton::tick(btnExit);
     if (ClockLR::isElapsed(timerMs, 700)) {
-      switch (displMsg) {
-        case 0: KH2441EF::setDisplayBuf(sel, KH2441EF::S_E, KH2441EF::S_P, KH2441EF::S_r, false); break;
-        case 1: KH2441EF::setDisplayBuf(sel, KH2441EF::S_E, KH2441EF::S_r, KH2441EF::S_r, false); break;
-        case 2: KH2441EF::setDisplayBuf(sel, KH2441EF::S_UND, prefStoreError/10%10, prefStoreError%10, false); break;
-        default:
-          displMsg = 0;
-      }
+      #ifdef USE_KH2441
+        switch (displMsg) {
+          case 0: KH2441EF::setDisplayBuf(sel ? KH2441EF::S_SEL1 : KH2441EF::S_SEL2, KH2441EF::S_E, KH2441EF::S_P, KH2441EF::S_r, false); break;
+          case 1: KH2441EF::setDisplayBuf(sel ? KH2441EF::S_SEL1 : KH2441EF::S_SEL2, KH2441EF::S_E, KH2441EF::S_r, KH2441EF::S_r, false); break;
+          case 2: KH2441EF::setDisplayBuf(sel ? KH2441EF::S_SEL1 : KH2441EF::S_SEL2, KH2441EF::S_UND, prefStoreError/10%10, prefStoreError%10, false); break;
+          default:
+            displMsg = 0;
+        }
+      #else
+        switch (displMsg) {
+          case 0: break;
+          case 1: break;
+          case 2: break;
+          default:
+            displMsg = 0;
+        }
+      #endif
       displMsg = displMsg == 2 ? 0 : displMsg + 1;
-      sel = sel == KH2441EF::S_SEL1 ? KH2441EF::S_SEL2 : KH2441EF::S_SEL1;
+      sel = !sel;
       timerMs = millis();
     }
   }
@@ -67,7 +88,9 @@ void setup() {
     ClockLR::tick();
     InputButton::tick(btnSelect);
     InputButton::tick(btnExit);
-    KH2441EF::tick();
+    #ifdef USE_KH2441
+      KH2441EF::tick();
+    #endif
     if (InputButton::isLongPressed(btnSelect)) {
       // enter select program mode
       progNo = selectProgramMode(progNo, false);
@@ -92,14 +115,19 @@ void setup() {
         ClockLR::tick();
         InputButton::tick(btnSelect);
         InputButton::tick(btnExit);
-        KH2441EF::tick();
+        #ifdef USE_KH2441
+          KH2441EF::tick();
+        #endif
         if (ClockLR::isElapsed(setupTimerMs, 300)) {
           //updateDisplayWithProgNo(progNo, i % 2, i % 2, true);
-          KH2441EF::setDisplayBuf(i % 2 ? KH2441EF::S_SEL2 : KH2441EF::S_BLANK,
+          #ifdef USE_KH2441
+            KH2441EF::setDisplayBuf(i % 2 ? KH2441EF::S_SEL2 : KH2441EF::S_BLANK,
                         i % 2 ? KH2441EF::S_BLANK : KH2441EF::S_S,
                         i % 2 ? KH2441EF::S_BLANK : KH2441EF::S_u,
                         i % 2 ? KH2441EF::S_BLANK : KH2441EF::S_d,
                         false);
+          #else
+          #endif
           setupTimerMs = ClockLR::tick();
           i++;
           if (i > 40) break;
@@ -113,9 +141,13 @@ void setup() {
   setupTimerMs = ClockLR::tick();
   while (!ClockLR::isElapsed(setupTimerMs, 1500)) {
     ClockLR::tick();
-    KH2441EF::tick();
+    #ifdef USE_KH2441
+      KH2441EF::tick();
+    #endif
   }
-  KH2441EF::muteDisplayInstantly();
+  #ifdef USE_KH2441
+    KH2441EF::muteDisplayInstantly();
+  #endif
   InputButton::reset(btnSelect);
   InputButton::reset(btnExit);
   
@@ -130,13 +162,18 @@ uint8_t selectProgramMode(uint8_t startWithProgNo, bool forSave99) {
   uint8_t pn = startWithProgNo;
   bool isOn = false;
   SelProgState state = NOT_INTLZD;
-  KH2441EF::setDisplayBuf(KH2441EF::S_MINUS, KH2441EF::S_MINUS, KH2441EF::S_MINUS, KH2441EF::S_MINUS, false);
+  #ifdef USE_KH2441
+    KH2441EF::setDisplayBuf(KH2441EF::S_MINUS, KH2441EF::S_MINUS, KH2441EF::S_MINUS, KH2441EF::S_MINUS, false);
+  #else
+  #endif
   uint16_t doubleClickStartMs, displayBlinkStartMs = ClockLR::tick();
   while (true) {
     ClockLR::tick();
     InputButton::tick(btnSelect);
     InputButton::tick(btnExit);
-    KH2441EF::tick();
+    #ifdef USE_KH2441
+      KH2441EF::tick();
+    #endif
     if (ClockLR::isElapsed(displayBlinkStartMs, 700)) {
       displayBlinkStartMs = ClockLR::now;
       // update screen
@@ -192,11 +229,14 @@ void updateDisplayWithProgNo(uint8_t pn, bool isOn, bool forSave99) {
 }
 
 void updateDisplayWithProgNo(uint8_t pn, bool isOn, bool selectFlag, bool forSave99) {
-  KH2441EF::setDisplayBuf(selectFlag || forSave99 ? KH2441EF::S_SEL2 : KH2441EF::S_BLANK,
+  #ifdef USE_KH2441
+    KH2441EF::setDisplayBuf(selectFlag || forSave99 ? KH2441EF::S_SEL2 : KH2441EF::S_BLANK,
                           forSave99 ? KH2441EF::S_S : KH2441EF::S_P,
                           isOn ? pn/10 : KH2441EF::S_BLANK,
                           isOn ? pn%10 : KH2441EF::S_BLANK,
                           false);
+  #else
+  #endif
 }
 
 uint8_t incrementProgNo(uint8_t pn, bool doubleClick) {
@@ -230,7 +270,9 @@ void loop(uint8_t progNo) {
   ClockLR::tick();
   InputButton::tick(btnSelect);
   InputButton::tick(btnExit);
-  KH2441EF::tick();
+  #ifdef USE_KH2441
+    KH2441EF::tick();
+  #endif
   
   switch(progNo) {
     case 00: tickProg00(progsData[0], progsData[1]); break;
@@ -238,10 +280,17 @@ void loop(uint8_t progNo) {
     case 03: tickProg03(progsData[0], progsData[1]); break;
     case 20: tickProg20(progsData[0], progsData[1]); break;
     default:
-      KH2441EF::setDisplayBufToErrorMsg();
+      setDisplayToErrorMessage();
   }
 
   if (_firstRun) _firstRun = false;
+}
+
+void setDisplayToErrorMessage() {
+  #ifdef USE_KH2441
+    KH2441EF::setDisplayBufToErrorMsg();
+  #else
+  #endif
 }
 
 void tickProg00(uint8_t &wasBtnPressed, uint8_t &unused) {
@@ -251,16 +300,24 @@ void tickProg00(uint8_t &wasBtnPressed, uint8_t &unused) {
   if (_firstRun || InputButton::wasPressed(btnSelect)) {
     wasBtnPressed = true;
     progTimerMs = ClockLR::now;
-    KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_t, KH2441EF::S_UND, KH2441EF::S_C, false);
+    #ifdef USE_KH2441
+      KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_t, KH2441EF::S_UND, KH2441EF::S_C, false);
+    #else
+    #endif
   }
   if (wasBtnPressed && ClockLR::isElapsed(progTimerMs, 600)) {
     wasBtnPressed = false;
     forceDataRead = true;
   }
   if (forceDataRead || ClockLR::isElapsed(progTimerMs, 10000)) {
-    KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while Temp measurements take place
+    #ifdef USE_KH2441
+      KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while Temp measurements take place
+    #endif
     float t = DS18B20::readTemperature(tempSensorDS18B20Pin);
-    KH2441EF::setDisplayBufToFloatWithOneDecimal(t);
+    #ifdef USE_KH2441
+      KH2441EF::setDisplayBufToFloatWithOneDecimal(t);
+    #else
+    #endif
     progTimerMs = ClockLR::tick();
   }
 }
@@ -276,9 +333,15 @@ void tickProg01(uint8_t &wasBtnPressed, uint8_t &pd0Mode) {
     pd0Mode = pd0Mode == 0 ? 1 : 0;
     progTimerMs = ClockLR::now;
     if (pd0Mode == 0) {
-      KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_t, KH2441EF::S_UND, KH2441EF::S_C, false);
+      #ifdef USE_KH2441
+        KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_t, KH2441EF::S_UND, KH2441EF::S_C, false);
+      #else
+      #endif
     } else {
-      KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_BLANK, KH2441EF::S_r, KH2441EF::S_h, false);
+      #ifdef USE_KH2441
+        KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_BLANK, KH2441EF::S_r, KH2441EF::S_h, false);
+      #else
+      #endif
     }
   }
   if (wasBtnPressed && ClockLR::isElapsed(progTimerMs, 600)) {
@@ -286,7 +349,9 @@ void tickProg01(uint8_t &wasBtnPressed, uint8_t &pd0Mode) {
     forceDataRead = true;
   }
   if (forceDataRead || ClockLR::isElapsed(progTimerMs, 10000)) {
-    KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while Temp measurements take place
+    #ifdef USE_KH2441
+      KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while Temp measurements take place
+    #endif
     float d;
     if (pd0Mode == 0) {
       d = HTU21D::readTemp();
@@ -296,14 +361,26 @@ void tickProg01(uint8_t &wasBtnPressed, uint8_t &pd0Mode) {
     HTU21D::Error err = HTU21D::getError();
     if (err != HTU21D::OK) {
       if (err == HTU21D::NOT_ENOUGH_DATA_RECEIVED) {
-        KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_E, KH2441EF::S_r, 0, false);
+        #ifdef USE_KH2441
+          KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_E, KH2441EF::S_r, 0, false);
+        #else
+        #endif
       } else if (err == HTU21D::CRC_ERROR) {
-        KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_c, KH2441EF::S_r, KH2441EF::S_c, false);
+        #ifdef USE_KH2441
+          KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_c, KH2441EF::S_r, KH2441EF::S_c, false);
+        #else
+        #endif
       } else {
-        KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_E, KH2441EF::S_r, KH2441EF::S_r, false);
+        #ifdef USE_KH2441
+          KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_E, KH2441EF::S_r, KH2441EF::S_r, false);
+        #else
+        #endif
       }
     } else {
-      KH2441EF::setDisplayBufToFloatWithOneDecimal(d);
+      #ifdef USE_KH2441
+        KH2441EF::setDisplayBufToFloatWithOneDecimal(d);
+      #else
+      #endif
     }
     progTimerMs = ClockLR::tick();
   }
@@ -315,9 +392,14 @@ void tickProg03(uint8_t &unused, uint8_t &unused2) {
   }
   
   if (_firstRun || ClockLR::isElapsed(progTimerMs, 1000)) {
-    KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while ADC conversion happens
+    #ifdef USE_KH2441
+      KH2441EF::muteDisplayInstantly(); // to prevent some segments to light bright while ADC conversion happens
+    #endif
     uint16_t v = pvt::ADCPrecise::preciseAnalogRead(ADC_MONITOR_PIN);
-    KH2441EF::setDisplayBufToInt(v);
+    #ifdef USE_KH2441
+      KH2441EF::setDisplayBufToInt(v);
+    #else
+    #endif
     progTimerMs = ClockLR::tick();
   }
 }
@@ -335,9 +417,12 @@ void tickProg20(uint8_t &flags, uint8_t &frameErrorCode) {
   bool updateDisplay = false;
   if (flags & F_READ_NEXT_FRAME) {
     flags &= ~F_READ_NEXT_FRAME;
-    
-    KH2441EF::muteDisplayInstantly();
-    KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_BLANK, KH2441EF::S_BLANK, KH2441EF::S_BLANK, true);
+
+    #ifdef USE_KH2441
+      KH2441EF::muteDisplayInstantly();
+      KH2441EF::setDisplayBuf(KH2441EF::S_BLANK, KH2441EF::S_BLANK, KH2441EF::S_BLANK, KH2441EF::S_BLANK, true);
+    #else
+    #endif
     uint8_t err = 0, subErr = 0;
     bool success = ErrorRx::readFrame(0x10, err, subErr); // block for long time
     flags &= ~F_FRAME_RECEIVED;
@@ -369,8 +454,11 @@ void tickProg20(uint8_t &flags, uint8_t &frameErrorCode) {
     if (flags & F_FRAME_RECEIVED) {
       bool error = flags & F_FRAME_ERROR;
       if (error) {
-        KH2441EF::setDisplayBufToIntAsHex(frameErrorCode, false);
-        KH2441EF::updateDisplayBufDigit(2, KH2441EF::S_E);
+        #ifdef USE_KH2441
+          KH2441EF::setDisplayBufToIntAsHex(frameErrorCode, false);
+          KH2441EF::updateDisplayBufDigit(2, KH2441EF::S_E);
+        #else
+        #endif
       } else {
         uint8_t l = ErrorRx::getReceivedDataLength();
         uint16_t v = ErrorRx::getDataByte(0);
@@ -380,7 +468,10 @@ void tickProg20(uint8_t &flags, uint8_t &frameErrorCode) {
           v <<= 4;
           v |= b1;
         }
-        KH2441EF::setDisplayBufToIntAsHex(v, false);
+        #ifdef USE_KH2441
+          KH2441EF::setDisplayBufToIntAsHex(v, false);
+        #else
+        #endif
       }
     }
   }
