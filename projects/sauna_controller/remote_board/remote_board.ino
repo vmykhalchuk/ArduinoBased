@@ -10,8 +10,8 @@
 #include <Arduino.h>
 #include <clock.h>
 #include <input_button.h>
+#include <tm1637.h>
 #include "rs485_client.h"
-#include "tm1637.h"
 
 int pin_RS485_DIR = 2; // LOW - Listening, HIGH - Transmitting
 int pin_TM1637_CLK = 4;
